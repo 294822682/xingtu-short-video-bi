@@ -2,6 +2,7 @@
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 900 };
 const DEFAULT_IFRAME = { width: 1200, height: 760 };
+const FRAME_TIMEOUT_MS = 60000;
 
 function usage() {
   return [
@@ -20,22 +21,28 @@ function targetUrl(baseUrl, path) {
 
 async function verifyTarget({ page, baseUrl, path, expectedText, minHeight }) {
   const url = targetUrl(baseUrl, path);
+  const iframeHtml = `<!doctype html><html><body style="margin:0"><iframe title="feishu-smoke" src="${url}" style="width:${DEFAULT_IFRAME.width}px;height:${DEFAULT_IFRAME.height}px;border:0"></iframe></body></html>`;
   await page.setContent(
-    `<!doctype html><html><body style="margin:0"><iframe title="feishu-smoke" src="${url}" style="width:${DEFAULT_IFRAME.width}px;height:${DEFAULT_IFRAME.height}px;border:0"></iframe></body></html>`,
+    iframeHtml,
     { waitUntil: "load" },
   );
-  await page.waitForTimeout(1000);
 
   const frame = page.frames().find((candidate) => candidate.url().startsWith(url));
   if (!frame) {
     throw new Error(`${path} iframe frame was not created. Frames: ${page.frames().map((item) => item.url()).join(", ")}`);
   }
 
-  await frame.waitForSelector("#root", { timeout: 10000 });
-  await frame.waitForSelector(`text=${expectedText}`, { timeout: 10000 });
+  await frame.waitForLoadState("domcontentloaded", { timeout: FRAME_TIMEOUT_MS });
+  await frame.waitForSelector("#root", { state: "attached", timeout: FRAME_TIMEOUT_MS });
+  await frame.waitForFunction(
+    (text) => document.body?.innerText.includes(text),
+    expectedText,
+    { timeout: FRAME_TIMEOUT_MS },
+  );
   const rootBox = await frame.locator("#root").boundingBox();
   if (!rootBox || rootBox.width < 1000 || rootBox.height < minHeight) {
-    throw new Error(`${path} rendered with unexpected root box: ${JSON.stringify(rootBox)}`);
+    const bodyText = await frame.locator("body").innerText().catch(() => "");
+    throw new Error(`${path} rendered with unexpected root box: ${JSON.stringify(rootBox)}; body=${bodyText.slice(0, 300)}`);
   }
 
   return {

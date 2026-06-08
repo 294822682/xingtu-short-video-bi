@@ -10,6 +10,21 @@
 - `/api/short-video/overview`：看板数据
 - `/api/admin/upload`：上传刷新
 
+## 当前线上入口
+
+当前已创建 Render Free Web Service：
+
+- Service: `xingtu-short-video-bi`
+- Service ID: `srv-d8jab01kh4rs73dfrnig`
+- Dashboard: `https://dashboard.render.com/web/srv-d8jab01kh4rs73dfrnig`
+- Public URL: `https://xingtu-short-video-bi.onrender.com/`
+- Admin URL: `https://xingtu-short-video-bi.onrender.com/admin`
+- GitHub repo: `https://github.com/294822682/xingtu-short-video-bi`
+
+当前服务用于飞书内嵌验收已经足够：HTTPS、同源 API、上传刷新、iframe 响应头和 iframe DOM 渲染均已通过脚本检查。
+
+限制：当前服务是 Render Free Web Service，未挂载 persistent disk。上传后的数据在当前实例内可刷新展示，但实例重启或重新部署后可能回到默认数据，需要重新上传 Excel。若要作为长期生产入口，应升级到带 persistent disk 的 Render Blueprint 配置。
+
 ## 推荐架构
 
 首版采用单服务同源部署：
@@ -17,11 +32,11 @@
 1. Vite 构建前端到 `dist/`。
 2. FastAPI 同时服务 `/api/*` 和 `dist/` 静态文件。
 3. 飞书只内嵌一个 HTTPS URL，例如 `https://xingtu-short-video-bi.onrender.com/`。
-4. 上传后的数据写入 `XINGTU_DATA_DIR/dataset.json`，云端服务重启后仍读取最近一次上传结果。
+4. 上传后的数据写入 `XINGTU_DATA_DIR/dataset.json`。
 
 这样可以避免飞书 iframe 内的跨域、混合内容和 API 域名不一致问题。
 
-## Render Blueprint 部署
+## Render 部署
 
 当前项目已提供：
 
@@ -30,6 +45,25 @@
 - `render.yaml`
 - `scripts/preflight_deploy.py`
 - `scripts/verify_feishu_deploy.py`
+
+当前线上服务使用 CLI 直接创建：
+
+```bash
+render services create \
+  --name xingtu-short-video-bi \
+  --type web_service \
+  --repo https://github.com/294822682/xingtu-short-video-bi \
+  --branch main \
+  --runtime docker \
+  --plan free \
+  --health-check-path /api/health \
+  --env-var XINGTU_DATA_DIR=/tmp/xingtu-data \
+  --auto-deploy \
+  --confirm \
+  -o json
+```
+
+长期生产建议使用 `render.yaml` Blueprint，挂载 1GB persistent disk 到 `/data`，并设置 `XINGTU_DATA_DIR=/data/current`。
 
 前置条件：
 
@@ -116,6 +150,15 @@ node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
 ```bash
 scripts/verify_feishu_acceptance.sh https://<your-bi-domain>
 scripts/verify_feishu_acceptance.sh https://<your-bi-domain> --upload
+```
+
+当前正式 URL 的验收命令：
+
+```bash
+PYTHON_BIN=.venv/bin/python \
+NODE_BIN=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+NODE_PATH=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+scripts/verify_feishu_acceptance.sh https://xingtu-short-video-bi.onrender.com --upload
 ```
 
 ## 飞书内嵌验收清单

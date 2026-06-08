@@ -54,6 +54,14 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 首版生产形态为单服务同源部署：FastAPI 同时提供 `/api/*` 和 Vite 构建后的前端静态文件，适合飞书 iframe 内嵌。
 
+当前已部署入口：
+
+- BI 页面：https://xingtu-short-video-bi.onrender.com/
+- 数据维护：https://xingtu-short-video-bi.onrender.com/admin
+- Render Dashboard：https://dashboard.render.com/web/srv-d8jab01kh4rs73dfrnig
+
+当前线上服务是 Render Free Web Service，使用公开 GitHub 仓库拉取 Dockerfile 部署。该免费服务未挂载 persistent disk，上传刷新可用，但服务重启或重新部署后需要重新上传 Excel。
+
 项目已包含：
 
 - `Dockerfile`
@@ -61,15 +69,24 @@ npm run dev -- --host 127.0.0.1 --port 5174
 - `docs/feishu-deploy.md`
 - `scripts/verify_feishu_deploy.py`
 
-部署到 Render 后，使用 Render 分配的 HTTPS 地址作为飞书网页应用入口。上传刷新数据会写入 `XINGTU_DATA_DIR/dataset.json`，需要部署平台提供持久化磁盘。
+`render.yaml` 保留为带 persistent disk 的正式生产 Blueprint 配置。启用后，上传刷新数据会写入 `XINGTU_DATA_DIR/dataset.json`，服务重启后仍可读取最近一次上传结果。
 
 GitHub 仓库：
 
 - https://github.com/294822682/xingtu-short-video-bi
 
-Render Blueprint 入口：
+Render Blueprint 入口（用于创建带持久磁盘的正式生产服务）：
 
 - https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-bi
+
+正式 URL 验收：
+
+```bash
+PYTHON_BIN=.venv/bin/python \
+NODE_BIN=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+NODE_PATH=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+scripts/verify_feishu_acceptance.sh https://xingtu-short-video-bi.onrender.com --upload
+```
 
 部署前检查：
 

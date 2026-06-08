@@ -2,19 +2,33 @@
 
 ## 当前结论
 
-当前项目已经具备飞书内嵌所需的本地生产形态：前端和后端同源、上传刷新可持久化、口径验证脚本可复跑。代码已推送到 GitHub 私有仓库。还不能直接内嵌飞书的唯一缺口是没有正式 HTTPS 域名。
+当前项目已经部署到 Render，并具备飞书内嵌验收所需的稳定 HTTPS 入口：前端和后端同源、上传刷新可用、iframe 响应头未阻断、iframe DOM 可渲染、口径验证脚本可复跑。
 
-当前 GitHub 私有仓库：
+当前 GitHub 仓库：
 
 ```text
 https://github.com/294822682/xingtu-short-video-bi
 ```
 
-Render Blueprint 入口：
+当前 Render 服务：
 
 ```text
-https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-bi
+https://dashboard.render.com/web/srv-d8jab01kh4rs73dfrnig
 ```
+
+当前飞书可内嵌入口：
+
+```text
+https://xingtu-short-video-bi.onrender.com/
+```
+
+当前数据维护入口：
+
+```text
+https://xingtu-short-video-bi.onrender.com/admin
+```
+
+注意：当前服务是 Render Free Web Service，未挂载 persistent disk。上传后的数据可立即刷新展示，但服务重启或重新部署后可能需要重新上传 Excel。长期生产入口建议升级到 `render.yaml` 中的 persistent disk Blueprint 配置。
 
 ## 已固定的生产入口
 
@@ -24,7 +38,7 @@ https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-b
 - `/api/short-video/overview`：看板数据
 - `/api/admin/upload`：上传刷新
 
-生产环境使用单服务同源部署，飞书只需要配置一个 HTTPS 地址，例如：
+生产环境使用单服务同源部署，飞书只需要配置一个 HTTPS 地址：
 
 ```text
 https://xingtu-short-video-bi.onrender.com/
@@ -52,7 +66,7 @@ https://xingtu-short-video-bi.onrender.com/
 .venv/bin/python scripts/preflight_deploy.py --require-git
 ```
 
-这一步通过后，才适合去 Render 创建服务。
+这一步通过后，才适合去 Render 创建或更新服务。
 
 ## 需要提交到仓库的文件
 
@@ -111,18 +125,40 @@ data/current/
 
 ## Render 创建服务
 
-1. 打开 Render Blueprint 入口。
-2. 登录 Render，并授权 Render 访问 GitHub 私有仓库 `294822682/xingtu-short-video-bi`。
-3. Render 会读取 `render.yaml`，创建 Docker Web Service。
-4. 确认服务包含 persistent disk：
+当前已用 Render CLI 创建 Free Web Service：
+
+```bash
+render services create \
+  --name xingtu-short-video-bi \
+  --type web_service \
+  --repo https://github.com/294822682/xingtu-short-video-bi \
+  --branch main \
+  --runtime docker \
+  --plan free \
+  --health-check-path /api/health \
+  --env-var XINGTU_DATA_DIR=/tmp/xingtu-data \
+  --auto-deploy \
+  --confirm \
+  -o json
+```
+
+如需长期生产持久化，使用 Render Blueprint 入口：
+
+```text
+https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-bi
+```
+
+Blueprint 创建后确认服务包含 persistent disk：
+
    - disk name: `xingtu-short-video-bi-data`
    - mount path: `/data`
    - size: `1GB`
-5. 确认环境变量：
-   - `XINGTU_DATA_DIR=/data/current`
-6. 等待部署完成，记录 Render 分配的 HTTPS URL。
 
-注意：上传后的 Excel 计算结果依赖 persistent disk。不要改成无磁盘或临时文件存储。
+确认环境变量：
+
+   - `XINGTU_DATA_DIR=/data/current`
+
+长期生产环境中，上传后的 Excel 计算结果应依赖 persistent disk。当前 Free Web Service 只用于首版飞书内嵌和业务验收。
 
 ## 部署后验收
 
@@ -148,6 +184,30 @@ node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
 scripts/verify_feishu_acceptance.sh https://<your-bi-domain>
 scripts/verify_feishu_acceptance.sh https://<your-bi-domain> --upload
 ```
+
+当前正式 URL 已通过：
+
+```bash
+PYTHON_BIN=.venv/bin/python \
+NODE_BIN=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
+NODE_PATH=/Users/ahs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
+scripts/verify_feishu_acceptance.sh https://xingtu-short-video-bi.onrender.com --upload
+```
+
+验证结果：
+
+- `health: ok`
+- `home: ok`
+- `admin: ok`
+- `iframe_headers: ok`
+- `overview_contract: ok`
+- `upload_refresh: ok`
+- `iframe_dom: ok`
+- `total_video_count: 1`
+- `total_exposure: 120000`
+- `completion_5s_display: 23.0%`
+- `actor_exposure_not_split: true`
+- `video_rankings_are_video_title_level: true`
 
 如果是首次部署验收环境，再做上传刷新检查：
 
@@ -180,12 +240,6 @@ https://<your-bi-domain>/
 - 窄宽度下页面无整体横向滚动，表格只在表格容器内横向滚动。
 - 刷新飞书页面后仍读取最近一次上传结果。
 
-## 下一步授权点
+## 下一步建议
 
-如果需要我继续代执行线上部署，需要明确授权：
-
-1. 初始化 Git 仓库、创建提交。
-2. 创建 GitHub 远端仓库并推送。
-3. 使用 Render Dashboard 或可用的 Render 凭证创建服务。
-
-没有这三项授权前，当前阶段应停在本地生产验收和上线交接清单。
+把 `https://xingtu-short-video-bi.onrender.com/` 配置到飞书网页应用并做现场验收；若领导确认要长期使用，升级到带 persistent disk 的 Render Blueprint 服务。
