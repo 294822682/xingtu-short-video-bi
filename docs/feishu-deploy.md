@@ -103,11 +103,20 @@ curl http://127.0.0.1:8020/admin
 
 注意：`--upload` 会上传一份临时生成的测试 Excel，并把当前 BI 数据刷新为测试数据。只在测试环境、首次部署验收或明确允许覆盖当前数据时执行。
 
+如果当前环境有 Playwright 和本机 Chrome，还可以做真实 iframe DOM 渲染检查：
+
+```bash
+node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
+```
+
+这一步会把首页和 `/admin` 分别放进一个模拟飞书网页应用的 iframe，确认 iframe 内能渲染 React root，并出现 `星途短视频经营 BI` 和 `上传或替换 Excel`。
+
 ## 飞书内嵌验收清单
 
 - 首页能在飞书 iframe 中加载，不跳空白页。
 - `/admin` 能打开，并显示上传 Excel 表单。
 - 部署验证脚本返回 `iframe_headers: ok`。
+- 如环境支持，iframe 渲染脚本返回 `iframe_dom: ok`。
 - 上传 Excel 后，总发布条数、总曝光量、5S 完播率、账号表、演员表刷新。
 - 总曝光量等大于五位数的数值按 `万` 展示。
 - 视频号没有 5S 完播率时仍显示 `未提供`。

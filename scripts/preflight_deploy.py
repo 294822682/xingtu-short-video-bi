@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "frontend/src/main.jsx",
     "frontend/src/styles.css",
     "scripts/verify_feishu_deploy.py",
+    "scripts/verify_feishu_iframe_render.cjs",
     "docs/feishu-deploy.md",
     "docs/feishu-release-handoff.md",
     "docs/page-spec.md",

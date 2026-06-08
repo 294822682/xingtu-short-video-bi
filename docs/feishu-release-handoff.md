@@ -88,6 +88,7 @@ render.yaml
 requirements.txt
 scripts/preflight_deploy.py
 scripts/verify_feishu_deploy.py
+scripts/verify_feishu_iframe_render.cjs
 tests/test_api.py
 tests/test_metrics.py
 tests/test_storage.py
@@ -132,6 +133,14 @@ data/current/
 
 只读检查通过时会返回 `iframe_headers: ok`，表示首页和 `/admin` 没有明显 iframe 阻断响应头。
 
+如果当前环境有 Playwright 和本机 Chrome，继续做 iframe DOM 渲染检查：
+
+```bash
+node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
+```
+
+通过时会返回 `iframe_dom: ok`，表示首页和 `/admin` 能在模拟 iframe 中渲染出核心内容。
+
 如果是首次部署验收环境，再做上传刷新检查：
 
 ```bash
@@ -153,6 +162,7 @@ https://<your-bi-domain>/
 - 首页在飞书 iframe 内正常加载。
 - `/admin` 能打开上传页。
 - 部署验证脚本返回 `iframe_headers: ok`。
+- 如环境支持，iframe 渲染脚本返回 `iframe_dom: ok`。
 - 上传 Excel 后页面刷新，账号汇总和演员汇总同步更新。
 - 大于五位数的曝光量按 `万` 展示。
 - 视频号没有 `5S完播率` 时显示 `未提供`。
