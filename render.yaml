@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: xingtu-short-video-bi
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: XINGTU_DATA_DIR
+        value: /data/current
+    disk:
+      name: xingtu-short-video-bi-data
+      mountPath: /data
+      sizeGB: 1
