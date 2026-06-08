@@ -63,6 +63,14 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 部署到 Render 后，使用 Render 分配的 HTTPS 地址作为飞书网页应用入口。上传刷新数据会写入 `XINGTU_DATA_DIR/dataset.json`，需要部署平台提供持久化磁盘。
 
+GitHub 仓库：
+
+- https://github.com/294822682/xingtu-short-video-bi
+
+Render Blueprint 入口：
+
+- https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-bi
+
 部署前检查：
 
 ```bash

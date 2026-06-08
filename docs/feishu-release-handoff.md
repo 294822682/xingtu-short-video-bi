@@ -2,9 +2,19 @@
 
 ## 当前结论
 
-当前项目已经具备飞书内嵌所需的本地生产形态：前端和后端同源、上传刷新可持久化、口径验证脚本可复跑。还不能直接内嵌飞书的唯一缺口是没有正式 HTTPS 域名。
+当前项目已经具备飞书内嵌所需的本地生产形态：前端和后端同源、上传刷新可持久化、口径验证脚本可复跑。代码已推送到 GitHub 私有仓库。还不能直接内嵌飞书的唯一缺口是没有正式 HTTPS 域名。
 
-本目录不是 Git 仓库，因此 Render Blueprint 暂时无法从当前目录直接创建线上服务。需要先把项目推到 GitHub、GitLab 或 Bitbucket，再在 Render 导入仓库。
+当前 GitHub 私有仓库：
+
+```text
+https://github.com/294822682/xingtu-short-video-bi
+```
+
+Render Blueprint 入口：
+
+```text
+https://render.com/deploy?repo=https://github.com/294822682/xingtu-short-video-bi
+```
 
 ## 已固定的生产入口
 
@@ -99,8 +109,8 @@ data/current/
 
 ## Render 创建服务
 
-1. 将项目初始化为 Git 仓库并推送到远端。
-2. 在 Render 选择 Blueprint，从远端仓库导入。
+1. 打开 Render Blueprint 入口。
+2. 登录 Render，并授权 Render 访问 GitHub 私有仓库 `294822682/xingtu-short-video-bi`。
 3. Render 会读取 `render.yaml`，创建 Docker Web Service。
 4. 确认服务包含 persistent disk：
    - disk name: `xingtu-short-video-bi-data`
