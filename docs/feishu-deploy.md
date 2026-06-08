@@ -111,6 +111,13 @@ node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
 
 这一步会把首页和 `/admin` 分别放进一个模拟飞书网页应用的 iframe，确认 iframe 内能渲染 React root，并出现 `星途短视频经营 BI` 和 `上传或替换 Excel`。
 
+也可以使用一键验收脚本串行执行上述检查：
+
+```bash
+scripts/verify_feishu_acceptance.sh https://<your-bi-domain>
+scripts/verify_feishu_acceptance.sh https://<your-bi-domain> --upload
+```
+
 ## 飞书内嵌验收清单
 
 - 首页能在飞书 iframe 中加载，不跳空白页。

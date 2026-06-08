@@ -87,6 +87,7 @@ package.json
 render.yaml
 requirements.txt
 scripts/preflight_deploy.py
+scripts/verify_feishu_acceptance.sh
 scripts/verify_feishu_deploy.py
 scripts/verify_feishu_iframe_render.cjs
 tests/test_api.py
@@ -140,6 +141,13 @@ node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
 ```
 
 通过时会返回 `iframe_dom: ok`，表示首页和 `/admin` 能在模拟 iframe 中渲染出核心内容。
+
+也可以用一键验收脚本串行执行只读、上传和 iframe DOM 检查：
+
+```bash
+scripts/verify_feishu_acceptance.sh https://<your-bi-domain>
+scripts/verify_feishu_acceptance.sh https://<your-bi-domain> --upload
+```
 
 如果是首次部署验收环境，再做上传刷新检查：
 
