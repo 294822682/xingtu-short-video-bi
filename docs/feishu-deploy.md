@@ -7,13 +7,13 @@
 - `/hub`：BI Hub
 - `/`、`/xingtu`：星途短视频 BI
 - `/admin`、`/admin/xingtu`：星途手动上传或替换 Excel
-- `/oae`：OAE BI 预留入口
-- `/admin/oae`：OAE 数据维护预留入口
+- `/oae`：OAE 经营 BI
+- `/admin/oae`：OAE 数据源说明入口
 - `/api/health`：健康检查
 - `/api/modules`：BI 模块列表
 - `/api/bi/xingtu/overview`：星途看板数据
 - `/api/bi/xingtu/admin/upload`：星途上传刷新
-- `/api/bi/oae/overview`：OAE 预留数据
+- `/api/bi/oae/overview`：OAE dashboard source 数据
 
 保留 `/api/short-video/overview` 与 `/api/admin/upload` 作为星途旧接口兼容。
 
@@ -42,9 +42,9 @@
 2. FastAPI 同时服务 `/api/*` 和 `dist/` 静态文件。
 3. 飞书可分别内嵌同一 HTTPS 域名下的不同路由，例如 `/xingtu` 与 `/oae`。
 4. 星途上传后的数据写入 `BI_DATA_DIR/dataset.json`，兼容旧环境变量 `XINGTU_DATA_DIR/dataset.json`。
-5. OAE 预留数据写入 `BI_DATA_DIR/oae_dataset.json`；未确认字段口径前，不启用上传解析。
+5. OAE 读取 `feishu_dashboard_source_latest_*.tsv`；默认使用打包在 `data/oae/sql_reports/` 的只读数据，也可通过 `OAE_DASHBOARD_SOURCE_DIR` 或 `BI_DATA_DIR/oae/sql_reports/` 覆盖为运行时数据。
 
-这样可以避免飞书 iframe 内的跨域、混合内容和 API 域名不一致问题。
+这样可以避免飞书 iframe 内的跨域、混合内容和 API 域名不一致问题，同时避免把 OAE 多源清洗逻辑塞进星途上传解析器。
 
 ## Render 部署
 
@@ -87,6 +87,7 @@ Render 环境变量：
 
 - `BI_DATA_DIR=/data/current`
 - `XINGTU_DATA_DIR=/data/current`
+- `OAE_DASHBOARD_SOURCE_DIR=/data/current/oae/sql_reports`（可选；不设置时使用 `BI_DATA_DIR/oae/sql_reports` 或打包数据）
 - `PORT` 由 Render 自动提供，Docker CMD 会读取。
 
 部署成功后，用 Render 分配的 HTTPS 域名作为飞书网页应用地址。

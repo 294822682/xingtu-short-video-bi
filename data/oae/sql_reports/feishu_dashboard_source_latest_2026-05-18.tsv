@@ -1,0 +1,134 @@
+report_date	source_table	scope_type	scope_name	parent_scope	metric_key	metric_name	actual	target	attain_rate	unit	source_column	sort_order
+2026-05-18	topline	department	全量		impressions	曝光	33651407.0	20000000.0	1.68257035	人次	ToplineSummary.full_account	100
+2026-05-18	topline	department	全量		mtd_unique_leads	唯一线索	14790	29700.0	0.49797979797979797	条	ToplineSummary.full_account	110
+2026-05-18	topline	department	全量		mtd_deals	实销	50	100.0	0.5	台	ToplineSummary.full_account	120
+2026-05-18	topline	department	全量		mtd_spend	消耗费用	591571.1599999999			元	ToplineSummary.full_account	130
+2026-05-18	topline	department	全量		mtd_cpl	总体CPL	39.99805003380662	55.0		元/条	ToplineSummary.full_account	140
+2026-05-18	topline	department	全量		mtd_cps	总体CPS	11831.423199999997	9060.02		元/台	ToplineSummary.full_account	150
+2026-05-18	topline	department	全量		pending_day	待交车（当日）	1			台	ToplineSummary.full_account	160
+2026-05-18	topline	department	全量		pending_cumulative	待交车（累计）	24			台	ToplineSummary.full_account	170
+2026-05-18	topline	department	全量		mtd_douyin_laike_orders	抖音-来客订单	121.0	300.0	0.4033333333333333	个	live_schedule.orders	180
+2026-05-18	topline_segment	segment	EX7 专项		mtd_unique_leads	唯一线索	9789			条	ToplineSummary.segment	200
+2026-05-18	topline_segment	segment	EX7 专项		mtd_deals	实销	10			台	ToplineSummary.segment	201
+2026-05-18	topline_segment	segment	EX7 专项		mtd_spend	消耗费用	353526.75			元	ToplineSummary.segment	202
+2026-05-18	topline_segment	segment	EX7 专项		mtd_cpl	实际CPL	36.11469506589029			元/条	ToplineSummary.segment	203
+2026-05-18	topline_segment	segment	EX7 专项		mtd_cps	实际CPS	35352.675			元/台	ToplineSummary.segment	204
+2026-05-18	topline_segment	segment	不含 EX7		mtd_unique_leads	唯一线索	5001			条	ToplineSummary.segment	300
+2026-05-18	topline_segment	segment	不含 EX7		mtd_deals	实销	40			台	ToplineSummary.segment	301
+2026-05-18	topline_segment	segment	不含 EX7		mtd_spend	消耗费用	238044.40999999992			元	ToplineSummary.segment	302
+2026-05-18	topline_segment	segment	不含 EX7		mtd_cpl	实际CPL	47.599362127574466			元/条	ToplineSummary.segment	303
+2026-05-18	topline_segment	segment	不含 EX7		mtd_cps	实际CPS	5951.110249999998			元/台	ToplineSummary.segment	304
+2026-05-18	lead_quality	department	全量		raw_leads	原始线索	16057.0			条	lead_quality_text	900
+2026-05-18	lead_quality	department	全量		lead_quality_unique_leads	唯一线索	14790.0			条	lead_quality_text	901
+2026-05-18	lead_quality	department	全量		unique_rate	唯一率	0.9211			比例	lead_quality_text	902
+2026-05-18	lead_quality	department	全量		unowned_leads	无主线索	432.0			条	lead_quality_text	903
+2026-05-18	lead_quality	department	全量		manual_overrides	人工归属	29.0			条	lead_quality_text	904
+2026-05-18	lead_quality	department	全量		manual_affected_rows	人工归属影响行	29.0			行	lead_quality_text	905
+2026-05-18	seed_account	account	EXEED星途		daily_impressions	当日曝光	2734055.0	361106.71	7.5713	人次	当日曝光	1000
+2026-05-18	seed_account	account	EXEED星途		mtd_impressions	累计曝光	17678561.0	20000000.0	0.8839	人次	累计曝光	1001
+2026-05-18	lead_account	account	星途汽车官方直播间		daily_leads	当日线索	232.0	461.0	0.5033	条	当日线索	2000
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_unique_leads	累计唯一线索	8628.0	14850.0	0.581	条	累计线索	2001
+2026-05-18	lead_account	account	星途汽车官方直播间		daily_deals	当日实销	2.0	1.64	1.2174	台	当日实销	2002
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_deals	累计实销	29.0	50.0	0.58	台	累计实销	2003
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_douyin_laike_orders	抖音-来客订单	120.0	150.0	0.8	个	抖音-来客订单数	2004
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_spend	累计线索费用	291070.5	453001.13		元	累计线索费用	2005
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_cpl	实际CPL	33.74	55.0		元/条	实际CPL	2006
+2026-05-18	lead_account	account	星途汽车官方直播间		mtd_cps	实际CPS	10036.91	9060.02		元/台	实际CPS	2007
+2026-05-18	lead_account	account	星途汽车直播营销中心		daily_leads	当日线索	249.0	706.21	0.35259999999999997	条	当日线索	2100
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_unique_leads	累计唯一线索	5212.0	14850.0	0.35100000000000003	条	累计线索	2101
+2026-05-18	lead_account	account	星途汽车直播营销中心		daily_deals	当日实销	1.0	3.07	0.3256	台	当日实销	2102
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_deals	累计实销	8.0	50.0	0.16	台	累计实销	2103
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_douyin_laike_orders	抖音-来客订单	1.0	150.0	0.0067	个	抖音-来客订单数	2104
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_spend	累计线索费用	237929.21	453001.13		元	累计线索费用	2105
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_cpl	实际CPL	45.65	55.0		元/条	实际CPL	2106
+2026-05-18	lead_account	account	星途汽车直播营销中心		mtd_cps	实际CPS	29741.15	9060.02		元/台	实际CPS	2107
+2026-05-18	lead_account	account	星途汽车直营中心		daily_leads	当日线索	1.0	1059.07	0.0009	条	当日线索	2200
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_unique_leads	累计唯一线索	24.0	14850.0	0.0016	条	累计线索	2201
+2026-05-18	lead_account	account	星途汽车直营中心		daily_deals	当日实销	0.0	3.43	0.0	台	当日实销	2202
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_deals	累计实销	2.0	50.0	0.04	台	累计实销	2203
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_douyin_laike_orders	抖音-来客订单	0.0	150.0	0.0	个	抖音-来客订单数	2204
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_spend	累计线索费用	0.0	453001.13		元	累计线索费用	2205
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_cpl	实际CPL	0.0	55.0		元/条	实际CPL	2206
+2026-05-18	lead_account	account	星途汽车直营中心		mtd_cps	实际CPS	0.0	9060.02		元/台	实际CPS	2207
+2026-05-18	lead_account	account	线索组汇总		daily_leads	当日线索	482.0	1165.57	0.41350000000000003	条	当日线索	2300
+2026-05-18	lead_account	account	线索组汇总		mtd_unique_leads	累计唯一线索	13864.0	29700.0	0.4668	条	累计线索	2301
+2026-05-18	lead_account	account	线索组汇总		daily_deals	当日实销	3.0	4.57	0.6563	台	当日实销	2302
+2026-05-18	lead_account	account	线索组汇总		mtd_deals	累计实销	39.0	100.0	0.39	台	累计实销	2303
+2026-05-18	lead_account	account	线索组汇总		mtd_douyin_laike_orders	抖音-来客订单	121.0	300.0	0.4033	个	抖音-来客订单数	2304
+2026-05-18	lead_account	account	线索组汇总		mtd_spend	累计线索费用	528999.71	906002.26		元	累计线索费用	2305
+2026-05-18	lead_account	account	线索组汇总		mtd_cpl	实际CPL	38.16	30.51		元/条	实际CPL	2306
+2026-05-18	lead_account	account	线索组汇总		mtd_cps	实际CPS	13564.1	9060.02		元/台	实际CPS	2307
+2026-05-18	seed_anchor	anchor	王雪	EXEED星途	daily_impressions	当日曝光	17968.0	222174.57	0.0809	人次	当日曝光	3000
+2026-05-18	seed_anchor	anchor	王雪	EXEED星途	mtd_impressions	累计曝光	907524.0	4000000.0	0.22690000000000002	人次	累计曝光	3001
+2026-05-18	seed_anchor	anchor	刘花旗	EXEED星途	daily_impressions	当日曝光	0.0	0.0		人次	当日曝光	3100
+2026-05-18	seed_anchor	anchor	刘花旗	EXEED星途	mtd_impressions	累计曝光	4800401.5	4000000.0	1.2001	人次	累计曝光	3101
+2026-05-18	seed_anchor	anchor	桂婕	EXEED星途	daily_impressions	当日曝光	17968.0	0.0		人次	当日曝光	3200
+2026-05-18	seed_anchor	anchor	桂婕	EXEED星途	mtd_impressions	累计曝光	5778004.5	4000000.0	1.4445	人次	累计曝光	3201
+2026-05-18	seed_anchor	anchor	岳浩然	EXEED星途	daily_impressions	当日曝光	0.0	234967.11	0.0	人次	当日曝光	3300
+2026-05-18	seed_anchor	anchor	岳浩然	EXEED星途	mtd_impressions	累计曝光	710460.5	4000000.0	0.1776	人次	累计曝光	3301
+2026-05-18	seed_anchor	anchor	陶雯义	EXEED星途	daily_impressions	当日曝光	27643.0	232308.04	0.11900000000000001	人次	当日曝光	3400
+2026-05-18	seed_anchor	anchor	陶雯义	EXEED星途	mtd_impressions	累计曝光	775330.5	4000000.0	0.1938	人次	累计曝光	3401
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	daily_leads	当日线索	230.0	135.14	1.7019	条	当日线索	4000
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_unique_leads	累计唯一线索	2051.0	3713.0	0.5524	条	累计线索	4001
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	daily_deals	当日实销	0.5	0.26	1.9535	台	当日实销	4002
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_deals	累计实销	9.92	13.0	0.7628	台	累计实销	4003
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_douyin_laike_orders	抖音-来客订单	24.0	37.5	0.64	个	抖音-来客订单数	4004
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_spend	累计线索费用	74215.6	113250.28		元	累计线索费用	4005
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_cpl	实际CPL	36.19	55.0		元/条	实际CPL	4006
+2026-05-18	lead_anchor	anchor	丁俐佳	星途汽车官方直播间	mtd_cps	实际CPS	7483.93	9060.0		元/台	实际CPS	4007
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	daily_leads	当日线索	2.0	104.0	0.0192	条	当日线索	4100
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_unique_leads	累计唯一线索	2259.0	3713.0	0.6084	条	累计线索	4101
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	daily_deals	当日实销	0.5	0.58	0.866	台	当日实销	4102
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_deals	累计实销	5.42	13.0	0.4167	台	累计实销	4103
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_douyin_laike_orders	抖音-来客订单	34.0	37.5	0.9067000000000001	个	抖音-来客订单数	4104
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_spend	累计线索费用	75016.25	113250.28		元	累计线索费用	4105
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_cpl	实际CPL	33.21	55.0		元/条	实际CPL	4106
+2026-05-18	lead_anchor	anchor	孙慧敏	星途汽车官方直播间	mtd_cps	实际CPS	13849.15	9060.0		元/台	实际CPS	4107
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	daily_leads	当日线索	0.0	145.0	0.0	条	当日线索	4200
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_unique_leads	累计唯一线索	1683.0	3713.0	0.4533	条	累计线索	4201
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	daily_deals	当日实销	1.5	0.42	3.5493	台	当日实销	4202
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_deals	累计实销	8.58	13.0	0.6603	台	累计实销	4203
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_douyin_laike_orders	抖音-来客订单	27.0	37.5	0.72	个	抖音-来客订单数	4204
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_spend	累计线索费用	66850.72	113250.28		元	累计线索费用	4205
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_cpl	实际CPL	39.72	55.0		元/条	实际CPL	4206
+2026-05-18	lead_anchor	anchor	何雯	星途汽车官方直播间 / 星途汽车直播营销中心	mtd_cps	实际CPS	7788.43	9060.0		元/台	实际CPS	4207
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	daily_leads	当日线索	1.0	77.07	0.013000000000000001	条	当日线索	4300
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_unique_leads	累计唯一线索	2635.0	3713.0	0.7097	条	累计线索	4301
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	daily_deals	当日实销	0.5	0.6	0.8317	台	当日实销	4302
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_deals	累计实销	5.08	13.0	0.391	台	累计实销	4303
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_douyin_laike_orders	抖音-来客订单	35.0	37.5	0.9333	个	抖音-来客订单数	4304
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_spend	累计线索费用	74987.93	113250.28		元	累计线索费用	4305
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_cpl	实际CPL	28.46	55.0		元/条	实际CPL	4306
+2026-05-18	lead_anchor	anchor	徐幻	星途汽车直播营销中心 / 星途汽车官方直播间	mtd_cps	实际CPS	14751.72	9060.0		元/台	实际CPS	4307
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	daily_leads	当日线索	248.0	165.79	1.4959	条	当日线索	4400
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_unique_leads	累计唯一线索	1640.0	3713.0	0.44170000000000004	条	累计线索	4401
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	daily_deals	当日实销	0.0	0.79	0.0	台	当日实销	4402
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_deals	累计实销	2.0	13.0	0.15380000000000002	台	累计实销	4403
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_douyin_laike_orders	抖音-来客订单	0.0	37.5	0.0	个	抖音-来客订单数	4404
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_spend	累计线索费用	79007.94	113250.28		元	累计线索费用	4405
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_cpl	实际CPL	48.18	55.0		元/条	实际CPL	4406
+2026-05-18	lead_anchor	anchor	侯翩翩	星途汽车直播营销中心	mtd_cps	实际CPS	39503.97	9060.0		元/台	实际CPS	4407
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	daily_leads	当日线索	0.0	149.71	0.0	条	当日线索	4500
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_unique_leads	累计唯一线索	1617.0	3713.0	0.4355	条	累计线索	4501
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	daily_deals	当日实销	0.0	0.64	0.0	台	当日实销	4502
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_deals	累计实销	4.0	13.0	0.3077	台	累计实销	4503
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_douyin_laike_orders	抖音-来客订单	0.0	37.5	0.0	个	抖音-来客订单数	4504
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_spend	累计线索费用	77062.05	113250.28		元	累计线索费用	4505
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_cpl	实际CPL	47.66	55.0		元/条	实际CPL	4506
+2026-05-18	lead_anchor	anchor	王馨	当日未开播	mtd_cps	实际CPS	19265.51	9060.0		元/台	实际CPS	4507
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	daily_leads	当日线索	0.0	140.0	0.0	条	当日线索	4600
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_unique_leads	累计唯一线索	1753.0	3713.0	0.4721	条	累计线索	4601
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	daily_deals	当日实销	0.0	0.86	0.0	台	当日实销	4602
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_deals	累计实销	1.0	13.0	0.07690000000000001	台	累计实销	4603
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_douyin_laike_orders	抖音-来客订单	1.0	37.5	0.026699999999999998	个	抖音-来客订单数	4604
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_spend	累计线索费用	81859.22	113250.28		元	累计线索费用	4605
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_cpl	实际CPL	46.7	55.0		元/条	实际CPL	4606
+2026-05-18	lead_anchor	anchor	徐欣悦	当日未开播	mtd_cps	实际CPS	81859.22	9060.0		元/台	实际CPS	4607
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	daily_leads	当日线索	0.0	265.21	0.0	条	当日线索	4700
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_unique_leads	累计唯一线索	0.0	3713.0	0.0	条	累计线索	4701
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	daily_deals	当日实销	0.0	0.93	0.0	台	当日实销	4702
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_deals	累计实销	0.0	13.0	0.0	台	累计实销	4703
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_douyin_laike_orders	抖音-来客订单	0.0	37.5	0.0	个	抖音-来客订单数	4704
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_spend	累计线索费用	0.0	113250.28		元	累计线索费用	4705
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_cpl	实际CPL		55.0		元/条	实际CPL	4706
+2026-05-18	lead_anchor	anchor	丁汉韬	当日未开播	mtd_cps	实际CPS		9060.0		元/台	实际CPS	4707

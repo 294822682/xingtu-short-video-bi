@@ -10,6 +10,8 @@ services:
         value: /data/current
       - key: XINGTU_DATA_DIR
         value: /data/current
+      - key: OAE_DASHBOARD_SOURCE_DIR
+        value: /data/current/oae/sql_reports
     disk:
       name: xingtu-short-video-bi-data
       mountPath: /data

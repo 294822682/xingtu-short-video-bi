@@ -50,7 +50,7 @@ async def upload_for_module(module_slug: str, file: UploadFile) -> dict:
     slug = module_slug_or_404(module_slug)
     module = BI_MODULES[slug]
     if module["parser"] != "short_video":
-        raise HTTPException(status_code=422, detail="该 BI 模块的 Excel 解析口径尚未配置，不能套用星途短视频解析器。")
+        raise HTTPException(status_code=422, detail="该 BI 模块为只读数据源展示，不接收原始 Excel 上传。")
 
     ensure_xlsx(file)
     content = await file.read()

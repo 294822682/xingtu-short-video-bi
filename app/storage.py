@@ -8,6 +8,7 @@ from typing import Any
 
 from app.default_data import DEFAULT_DATASETS
 from app.modules import DEFAULT_MODULE_SLUG, normalize_module_slug
+from app.oae_dashboard import load_oae_dataset_from_sources
 
 DATASET_FILE_NAMES = {
     "xingtu": "dataset.json",
@@ -36,9 +37,14 @@ def default_dataset_for_module(module_slug: str = DEFAULT_MODULE_SLUG) -> dict[s
 
 
 def load_dataset(dataset_path: Path | None = None, module_slug: str = DEFAULT_MODULE_SLUG) -> dict[str, Any]:
+    slug = normalize_module_slug(module_slug)
     path = dataset_path if dataset_path is not None else dataset_path_from_env(module_slug)
     if path is None or not path.exists():
-        return default_dataset_for_module(module_slug)
+        if slug == "oae":
+            source_dataset = load_oae_dataset_from_sources()
+            if source_dataset is not None:
+                return source_dataset
+        return default_dataset_for_module(slug)
     return json.loads(path.read_text(encoding="utf-8"))
 
 

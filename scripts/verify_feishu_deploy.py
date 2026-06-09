@@ -114,9 +114,17 @@ def verify(base_url: str, upload: bool) -> dict[str, object]:
 
         oae_overview = client.get(absolute_url(base_url, "/api/bi/oae/overview"))
         assert_response(oae_overview, "oae_overview")
-        if oae_overview.json()["overview"].get("module_status") != "pending_source_contract":
-            raise AssertionError("OAE should remain pending until its source contract is configured")
-        results["oae_pending_contract"] = "ok"
+        oae_payload = oae_overview.json()
+        if oae_payload["overview"].get("module_status") != "ready":
+            raise AssertionError("OAE should load dashboard source data")
+        if oae_payload["overview"].get("source_contract") != "feishu_dashboard_source_tsv":
+            raise AssertionError("OAE source contract mismatch")
+        if not oae_payload.get("oae_dashboard", {}).get("lead_accounts"):
+            raise AssertionError("OAE dashboard should include lead account rows")
+        results["oae_dashboard_source"] = {
+            "report_date": oae_payload["overview"].get("report_date"),
+            "lead_accounts": len(oae_payload["oae_dashboard"]["lead_accounts"]),
+        }
 
         overview_before = client.get(absolute_url(base_url, "/api/short-video/overview"))
         assert_response(overview_before, "overview_before")

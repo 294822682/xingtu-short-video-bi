@@ -153,8 +153,8 @@ DEFAULT_OAE_DATASET = {
         "overall_5s_completion_rate_display": "未提供",
         "actor_video_count": 0,
         "actor_count": 0,
-        "quality_status": "等待 OAE 报表口径",
-        "source_file_name": "待上传",
+        "quality_status": "未找到 OAE dashboard source",
+        "source_file_name": "未找到 feishu_dashboard_source_latest_*.tsv",
         "generated_at": "未生成",
         "module_status": "pending_source_contract",
     },
@@ -165,10 +165,10 @@ DEFAULT_OAE_DATASET = {
         "used_sheets": [],
         "excluded_sheets": [],
         "missing_fields": {},
-        "sheet_issues": {"OAE": ["等待确认 OAE BI 报表字段口径"]},
+        "sheet_issues": {"OAE": ["未找到 OAE dashboard source TSV"]},
         "invalid_values": {},
         "sheets_without_5s_completion": [],
-        "notes": ["OAE 数据源与星途短视频口径隔离", "未确认字段前不套用星途解析器"],
+        "notes": ["OAE 数据源与星途短视频口径隔离", "缺少 feishu_dashboard_source_latest_*.tsv 时不展示假指标"],
     },
 }
 

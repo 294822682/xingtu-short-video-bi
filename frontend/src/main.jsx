@@ -50,7 +50,7 @@ function HubPage() {
               </a>
               <a className="admin-link" href={module.adminPath}>数据维护</a>
             </div>
-            <Badge text={module.uploadEnabled ? "已接入上传" : "待接入口径"} tone={module.uploadEnabled ? "success" : "warning"} />
+            <Badge text={module.uploadEnabled ? "已接入上传" : "只读数据源"} tone={module.uploadEnabled ? "success" : "neutral"} />
           </article>
         ))}
       </section>
@@ -94,6 +94,10 @@ function DashboardPage({ module }) {
 
   const overview = dataset.overview;
   const isPending = overview.module_status === "pending_source_contract";
+
+  if (module.slug === "oae" && dataset.oae_dashboard && !isPending) {
+    return <OaeDashboardPage dataset={dataset} status={status} module={module} />;
+  }
 
   return (
     <main className="app-shell">
@@ -163,6 +167,251 @@ function DashboardPage({ module }) {
   );
 }
 
+function OaeDashboardPage({ dataset, status, module }) {
+  const dashboard = dataset.oae_dashboard;
+  const leadAccounts = dashboard.lead_accounts || [];
+  const leadAnchors = dashboard.lead_anchors || [];
+  const seedAnchors = dashboard.seed_anchors || [];
+  const trends = dashboard.trends || [];
+
+  return (
+    <main className="app-shell oae-shell">
+      <Header dataset={dataset} status={status} module={module} />
+      <nav className="tab-bar" aria-label="OAE 报表导航">
+        <a href="/hub">BI Hub</a>
+        <a href="#oae-overview">经营总览</a>
+        <a href="#oae-accounts">线索账号</a>
+        <a href="#oae-anchors">主播贡献</a>
+        <a href="#oae-seed">种草曝光</a>
+        <a href="#oae-trends">日报趋势</a>
+      </nav>
+
+      <section id="oae-overview" className="hero-grid oae-hero">
+        <div className="overview-panel">
+          <div className="section-label">OAE 经营日报</div>
+          <h2>{module.name}</h2>
+          <p>读取 OAE pipeline 已产出的 dashboard source TSV。原始多源清洗、归因和质量校验仍在 OAE 仓库完成。</p>
+          <dl className="source-list">
+            <div>
+              <dt>业务日期</dt>
+              <dd>{dashboard.report_date}</dd>
+            </div>
+            <div>
+              <dt>数据源</dt>
+              <dd>{dataset.overview.source_file_name}</dd>
+            </div>
+            <div>
+              <dt>可用日期</dt>
+              <dd>{dashboard.available_report_dates.length} 个</dd>
+            </div>
+          </dl>
+        </div>
+        <OaeKpiGrid kpis={dashboard.kpis || []} />
+      </section>
+
+      <section className="chart-grid oae-grid">
+        <OaeSegmentPanel segments={dashboard.segments || []} />
+        <OaeTrendPanel trends={trends} />
+      </section>
+
+      <section id="oae-accounts" className="report-section">
+        <SectionHeader title="线索账号表现" subtitle="按账号查看当日线索、累计唯一线索、实销、抖音来客与成本表现。" />
+        <OaeAccountTable rows={leadAccounts} />
+      </section>
+
+      <section id="oae-anchors" className="report-section">
+        <SectionHeader title="主播贡献表现" subtitle="按主播查看线索、实销、抖音来客和成本指标。" />
+        <OaeAnchorTable rows={leadAnchors} />
+      </section>
+
+      <section id="oae-seed" className="report-section">
+        <SectionHeader title="种草曝光表现" subtitle="展示 EXEED 星途账号和主播的当日曝光、累计曝光与目标达成。" />
+        <SeedExposurePanel account={dashboard.seed_account} anchors={seedAnchors} />
+      </section>
+    </main>
+  );
+}
+
+function OaeKpiGrid({ kpis }) {
+  const featured = new Set(["impressions", "mtd_unique_leads", "mtd_deals", "mtd_douyin_laike_orders"]);
+  return (
+    <div className="kpi-grid oae-kpis">
+      {kpis.map((item) => (
+        <article className={featured.has(item.metric_key) ? "kpi-card featured" : "kpi-card"} key={item.metric_key}>
+          <span>{item.metric_name}</span>
+          <strong>{formatOaeMetricValue(item.actual, item.unit)}</strong>
+          <small>{Number(item.target || 0) > 0 ? `目标 ${formatOaeMetricValue(item.target, item.unit)} · ${formatOaeRate(item.attain_rate)}` : "经营指标"}</small>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function OaeSegmentPanel({ segments }) {
+  return (
+    <section className="panel" aria-label="专项分层">
+      <div className="panel-title">
+        <BarChart3 size={18} />
+        <h3>EX7 / 非 EX7 分层</h3>
+      </div>
+      <div className="segment-list">
+        {segments.map((segment) => (
+          <article className="segment-row" key={segment.segment_name}>
+            <strong>{segment.segment_name}</strong>
+            <span>线索 {formatOaeMetricValue(segment.mtd_unique_leads, "条")}</span>
+            <span>实销 {formatOaeMetricValue(segment.mtd_deals, "台")}</span>
+            <span>CPL {formatOaeMetricValue(segment.mtd_cpl, "元/条")}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OaeTrendPanel({ trends }) {
+  const max = Math.max(...trends.map((row) => Number(row.impressions || 0)), 1);
+  return (
+    <section id="oae-trends" className="panel" aria-label="日报趋势">
+      <div className="panel-title">
+        <TrendingUp size={18} />
+        <h3>日报趋势</h3>
+      </div>
+      <div className="bars compact trend-bars">
+        {trends.slice(-10).map((row) => {
+          const width = Math.max(2, (Number(row.impressions || 0) / max) * 100);
+          return (
+            <div className="bar-row" key={row.report_date}>
+              <span>{row.report_date}</span>
+              <div className="bar-track">
+                <i style={{ width: `${width}%` }} />
+              </div>
+              <b>{formatBusinessNumber(row.impressions)}</b>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function OaeAccountTable({ rows }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>账号</th>
+            <th>当日线索</th>
+            <th>累计唯一线索</th>
+            <th>抖音来客</th>
+            <th>累计实销</th>
+            <th>线索费用</th>
+            <th>CPL</th>
+            <th>CPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.account_name}>
+              <td>{row.account_name}</td>
+              <td>{formatOaeMetricValue(row.daily_leads, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_unique_leads, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_douyin_laike_orders, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_deals, "台")}</td>
+              <td>{formatOaeMetricValue(row.mtd_spend, "元")}</td>
+              <td>{formatOaeMetricValue(row.mtd_cpl, "元/条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_cps, "元/台")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function OaeAnchorTable({ rows }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>主播</th>
+            <th>归属账号</th>
+            <th>当日线索</th>
+            <th>累计唯一线索</th>
+            <th>抖音来客</th>
+            <th>累计实销</th>
+            <th>CPL</th>
+            <th>CPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.parent_scope}-${row.anchor_name}`}>
+              <td>{row.anchor_name}</td>
+              <td>{row.parent_scope || "未提供"}</td>
+              <td>{formatOaeMetricValue(row.daily_leads, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_unique_leads, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_douyin_laike_orders, "条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_deals, "台")}</td>
+              <td>{formatOaeMetricValue(row.mtd_cpl, "元/条")}</td>
+              <td>{formatOaeMetricValue(row.mtd_cps, "元/台")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SeedExposurePanel({ account, anchors }) {
+  return (
+    <div className="chart-grid secondary">
+      <section className="panel" aria-label="种草账号曝光">
+        <div className="panel-title">
+          <BarChart3 size={18} />
+          <h3>{account.account_name}</h3>
+        </div>
+        <div className="seed-summary">
+          <div>
+            <span>当日曝光</span>
+            <strong>{formatOaeMetricValue(account.daily_impressions, "人次")}</strong>
+          </div>
+          <div>
+            <span>累计曝光</span>
+            <strong>{formatOaeMetricValue(account.mtd_impressions, "人次")}</strong>
+          </div>
+          <div>
+            <span>目标达成</span>
+            <strong>{formatOaeRate(account.mtd_impressions_attain_rate)}</strong>
+          </div>
+        </div>
+      </section>
+      <section className="panel" aria-label="种草主播曝光">
+        <div className="panel-title">
+          <BarChart3 size={18} />
+          <h3>主播累计曝光</h3>
+        </div>
+        <div className="bars compact">
+          {anchors.slice(0, 8).map((row) => {
+            const max = Math.max(...anchors.map((item) => Number(item.mtd_impressions || 0)), 1);
+            const width = Math.max(2, (Number(row.mtd_impressions || 0) / max) * 100);
+            return (
+              <div className="bar-row" key={row.anchor_name}>
+                <span>{row.anchor_name}</span>
+                <div className="bar-track">
+                  <i style={{ width: `${width}%` }} />
+                </div>
+                <b>{formatBusinessNumber(row.mtd_impressions)}</b>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function Header({ dataset, status, module }) {
   const live = status === "live";
   return (
@@ -184,8 +433,8 @@ function Header({ dataset, status, module }) {
 function PendingPanel({ module }) {
   return (
     <section className="pending-panel" aria-label={`${module.name} 待接入`}>
-      <Badge text="待接入口径" tone="warning" />
-      <h2>已预留独立入口，等待 OAE 数据源</h2>
+      <Badge text="等待数据源" tone="warning" />
+      <h2>未找到可展示的数据源</h2>
       <p>{module.adminDescription}</p>
       <div className="pending-actions">
         <a className="admin-link primary" href={module.adminPath}>查看维护入口</a>
@@ -341,7 +590,7 @@ function ActorTable({ rows }) {
 function AdminPage({ module }) {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState(
-    module.uploadEnabled ? "选择 Excel 后上传，系统会重新生成 BI 数据。" : "该模块上传入口已预留，等待确认 OAE 报表字段口径。"
+    module.uploadEnabled ? "选择 Excel 后上传，系统会重新生成 BI 数据。" : "该模块为只读数据源展示，数据由对应业务 pipeline 生成。"
   );
   const [busy, setBusy] = useState(false);
 
@@ -352,7 +601,7 @@ function AdminPage({ module }) {
   async function handleUpload(event) {
     event.preventDefault();
     if (!module.uploadEnabled) {
-      setMessage("OAE 解析口径尚未配置，不能套用星途短视频上传逻辑。");
+      setMessage("OAE 不接收原始 Excel 上传，请先在 OAE 仓库完成多源清洗和 dashboard source 导出。");
       return;
     }
     if (!file) {
@@ -385,16 +634,23 @@ function AdminPage({ module }) {
       </header>
       <section className="admin-panel">
         <UploadCloud size={34} />
-        <h2>上传或替换 Excel</h2>
+        <h2>{module.uploadEnabled ? "上传或替换 Excel" : "只读数据源说明"}</h2>
         <p>{module.adminDescription}</p>
-        <form onSubmit={handleUpload} aria-busy={busy}>
-          <label className="sr-only" htmlFor="excel-upload">选择 Excel 文件</label>
-          <input id="excel-upload" type="file" accept=".xlsx" required disabled={!module.uploadEnabled} onChange={(event) => setFile(event.target.files?.[0] || null)} />
-          <button type="submit" disabled={busy || !module.uploadEnabled}>
-            {busy ? <RefreshCw size={16} className="spin" /> : <UploadCloud size={16} />}
-            {busy ? "刷新中" : "上传并刷新"}
-          </button>
-        </form>
+        {module.uploadEnabled ? (
+          <form onSubmit={handleUpload} aria-busy={busy}>
+            <label className="sr-only" htmlFor="excel-upload">选择 Excel 文件</label>
+            <input id="excel-upload" type="file" accept=".xlsx" required onChange={(event) => setFile(event.target.files?.[0] || null)} />
+            <button type="submit" disabled={busy}>
+              {busy ? <RefreshCw size={16} className="spin" /> : <UploadCloud size={16} />}
+              {busy ? "刷新中" : "上传并刷新"}
+            </button>
+          </form>
+        ) : (
+          <div className="readonly-source">
+            <strong>数据刷新路径</strong>
+            <span>OAE 仓库完成多源清洗和日报导出后，同步 `feishu_dashboard_source_latest_*.tsv` 到 Hub。</span>
+          </div>
+        )}
         <div className="admin-message" aria-live="polite">{message}</div>
       </section>
     </main>
@@ -417,6 +673,24 @@ function Badge({ icon, text, tone = "neutral" }) {
       {text}
     </span>
   );
+}
+
+function formatOaeMetricValue(value, unit = "") {
+  if (value === null || value === undefined || value === "") return "未提供";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  if (unit.includes("元/")) return `${number.toLocaleString("zh-CN", { maximumFractionDigits: 1 })}${unit}`;
+  if (unit.includes("元")) return `${formatBusinessNumber(number)}${unit}`;
+  if (unit.includes("次") || unit.includes("人次")) return `${formatBusinessNumber(number)}${unit}`;
+  if (unit.includes("条") || unit.includes("台") || unit.includes("行") || unit.includes("个")) return `${formatInteger(number)}${unit}`;
+  return formatBusinessNumber(number);
+}
+
+function formatOaeRate(value) {
+  if (value === null || value === undefined || value === "") return "未提供";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "未提供";
+  return `${(number * 100).toFixed(1)}%`;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

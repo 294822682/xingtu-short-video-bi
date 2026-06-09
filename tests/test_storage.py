@@ -1,6 +1,7 @@
 import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
+from unittest.mock import patch
 
 from app.storage import dataset_path_from_env, load_dataset, save_dataset
 
@@ -31,6 +32,14 @@ class StorageTest(unittest.TestCase):
 
     def test_oae_default_dataset_is_separate_from_xingtu(self):
         dataset = load_dataset(module_slug="oae")
+
+        self.assertEqual(dataset["overview"]["module_status"], "ready")
+        self.assertEqual(dataset["overview"]["source_contract"], "feishu_dashboard_source_tsv")
+        self.assertGreater(dataset["overview"]["total_exposure"], 0)
+
+    def test_oae_falls_back_to_pending_dataset_when_source_is_missing(self):
+        with patch("app.storage.load_oae_dataset_from_sources", return_value=None):
+            dataset = load_dataset(module_slug="oae")
 
         self.assertEqual(dataset["overview"]["module_status"], "pending_source_contract")
         self.assertEqual(dataset["overview"]["total_exposure"], 0)

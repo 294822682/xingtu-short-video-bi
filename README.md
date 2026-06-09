@@ -16,10 +16,10 @@
 - Hub 入口：`/hub`
 - 星途短视频 BI：`/` 和 `/xingtu`
 - 星途数据维护：`/admin` 和 `/admin/xingtu`
-- OAE BI 预留入口：`/oae`
-- OAE 数据维护预留入口：`/admin/oae`
+- OAE BI：`/oae`
+- OAE 数据说明：`/admin/oae`
 
-`/` 与 `/admin` 保持向后兼容，避免已配置的飞书网页应用入口失效。OAE 当前只完成入口和数据隔离，未确认 OAE 报表字段口径前，不使用星途短视频解析器处理 OAE 文件。
+`/` 与 `/admin` 保持向后兼容，避免已配置的飞书网页应用入口失效。OAE 不使用星途短视频解析器，也不接收原始 Excel 上传；它读取 Operations Analytics Engine pipeline 已产出的 `feishu_dashboard_source_latest_*.tsv`。
 
 ## 当前口径
 
@@ -69,6 +69,8 @@ npm run dev -- --host 127.0.0.1 --port 5174
 当前已部署入口：
 
 - BI 页面：https://xingtu-short-video-bi.onrender.com/
+- BI Hub：https://xingtu-short-video-bi.onrender.com/hub
+- OAE BI：https://xingtu-short-video-bi.onrender.com/oae
 - 数据维护：https://xingtu-short-video-bi.onrender.com/admin
 - Render Dashboard：https://dashboard.render.com/web/srv-d8jab01kh4rs73dfrnig
 
@@ -83,7 +85,7 @@ npm run dev -- --host 127.0.0.1 --port 5174
 - `docs/feishu-deploy.md`
 - `scripts/verify_feishu_deploy.py`
 
-`render.yaml` 保留为带 persistent disk 的正式生产 Blueprint 配置。启用后，上传刷新数据会写入 `XINGTU_DATA_DIR/dataset.json`，服务重启后仍可读取最近一次上传结果。
+`render.yaml` 保留为带 persistent disk 的正式生产 Blueprint 配置。启用后，上传刷新数据会写入 `XINGTU_DATA_DIR/dataset.json`，服务重启后仍可读取最近一次上传结果。OAE dashboard source TSV 默认打包在 `data/oae/sql_reports/`；如果设置 `OAE_DASHBOARD_SOURCE_DIR` 或在 `BI_DATA_DIR/oae/sql_reports/` 放入 TSV，会优先读取运行时数据。
 
 GitHub 仓库：
 

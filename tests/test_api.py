@@ -39,7 +39,7 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(modules["oae"]["dashboard_path"], "/oae")
         self.assertFalse(modules["oae"]["upload_enabled"])
 
-    def test_module_overview_keeps_oae_as_pending_without_fabricated_metrics(self):
+    def test_module_overview_loads_oae_dashboard_source_metrics(self):
         client = TestClient(app)
 
         response = client.get("/api/bi/oae/overview")
@@ -47,9 +47,12 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["module"]["slug"], "oae")
-        self.assertEqual(payload["overview"]["module_status"], "pending_source_contract")
-        self.assertEqual(payload["overview"]["total_exposure"], 0)
-        self.assertEqual(payload["account_metrics"], [])
+        self.assertEqual(payload["overview"]["module_status"], "ready")
+        self.assertEqual(payload["overview"]["source_contract"], "feishu_dashboard_source_tsv")
+        self.assertEqual(payload["overview"]["report_date"], "2026-06-08")
+        self.assertGreater(payload["overview"]["total_exposure"], 0)
+        self.assertIn("oae_dashboard", payload)
+        self.assertGreater(len(payload["oae_dashboard"]["lead_accounts"]), 0)
 
     def test_oae_upload_is_blocked_until_source_contract_exists(self):
         client = TestClient(app)
@@ -65,10 +68,10 @@ class ApiTest(unittest.TestCase):
             response = client.post(
                 "/api/bi/oae/admin/upload",
                 files={"file": ("oae.xlsx", tmp, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
-            )
+        )
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("尚未配置", response.json()["detail"])
+        self.assertIn("只读数据源", response.json()["detail"])
 
     def test_unknown_module_returns_404(self):
         client = TestClient(app)

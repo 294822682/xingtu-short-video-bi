@@ -97,6 +97,8 @@ def check_render_yaml(results: dict[str, object]) -> None:
     env = {item["key"]: item["value"] for item in service.get("envVars", [])}
     if env.get("XINGTU_DATA_DIR") != "/data/current":
         raise AssertionError("render.yaml should set XINGTU_DATA_DIR=/data/current")
+    if env.get("OAE_DASHBOARD_SOURCE_DIR") != "/data/current/oae/sql_reports":
+        raise AssertionError("render.yaml should set OAE_DASHBOARD_SOURCE_DIR=/data/current/oae/sql_reports")
     disk = service.get("disk") or {}
     if disk.get("mountPath") != "/data" or int(disk.get("sizeGB", 0)) < 1:
         raise AssertionError("render.yaml should mount a persistent disk at /data with at least 1GB")
@@ -109,12 +111,21 @@ def check_dockerfile(results: dict[str, object]) -> None:
         "npm ci",
         "npm run build",
         "pip install --no-cache-dir -r requirements.txt",
+        "COPY data ./data",
         "uvicorn app.main:app",
     ]
     missing = [item for item in required if item not in dockerfile]
     if missing:
         raise AssertionError(f"Dockerfile missing expected commands: {missing}")
     results["dockerfile"] = "ok"
+
+
+def check_oae_dashboard_sources(results: dict[str, object]) -> None:
+    source_dir = ROOT / "data" / "oae" / "sql_reports"
+    sources = sorted(source_dir.glob("feishu_dashboard_source_latest_*.tsv"))
+    if not sources:
+        raise AssertionError("OAE dashboard source TSV files are missing from data/oae/sql_reports")
+    results["oae_dashboard_sources"] = {"count": len(sources), "latest": sources[-1].name}
 
 
 def check_tests_and_build(results: dict[str, object]) -> None:
@@ -156,6 +167,7 @@ def main() -> int:
         lambda output: check_git_state(output, args.require_git),
         check_render_yaml,
         check_dockerfile,
+        check_oae_dashboard_sources,
         check_tests_and_build,
         check_production_assets,
     ]
