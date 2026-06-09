@@ -11,6 +11,7 @@ from app.metrics import (
     build_video_rankings,
     normalize_records,
     quality_status,
+    rows_from_openpyxl,
     split_actors,
 )
 
@@ -90,7 +91,37 @@ class MetricsTest(unittest.TestCase):
         self.assertEqual(accounts[0]["completion_5s_display"], "未提供")
         self.assertEqual(accounts[0]["completion_field_source"], "未提供")
 
-    def test_workbook_dataset_prefers_univer_visible_rows(self):
+    def test_rows_from_openpyxl_resets_untrusted_sheet_dimensions(self):
+        class FakeSheet:
+            def __init__(self):
+                self.reset_called = False
+
+            def reset_dimensions(self):
+                self.reset_called = True
+
+            def iter_rows(self, values_only=True):
+                return iter(
+                    [
+                        ["视频名称", "发布时间", "播放量", "5S完播率", "视频演员"],
+                        ["openpyxl行", "2026/3/1", "100", "20%", "桂婕"],
+                    ]
+                )
+
+        class FakeWorkbook:
+            def __init__(self):
+                self.sheet = FakeSheet()
+                self.sheet.title = "抖音极速拍档"
+                self.worksheets = [self.sheet]
+
+        fake_workbook = FakeWorkbook()
+        with patch("app.metrics.load_workbook", return_value=fake_workbook):
+            rows = rows_from_openpyxl(Path("placeholder.xlsx"))
+
+        self.assertTrue(fake_workbook.sheet.reset_called)
+        self.assertEqual(rows[0]["source_sheet"], "抖音极速拍档")
+        self.assertEqual(rows[0]["values"][0], "openpyxl行")
+
+    def test_workbook_dataset_prefers_openpyxl_visible_rows(self):
         openpyxl_rows = [
             {
                 "source_sheet": "抖音A",
@@ -116,8 +147,26 @@ class MetricsTest(unittest.TestCase):
         ):
             dataset = build_dataset_from_workbook(Path("placeholder.xlsx"), "placeholder.xlsx")
 
-        self.assertEqual(dataset["overview"]["total_video_count"], 2)
-        self.assertEqual(dataset["overview"]["total_exposure"], 300)
+        self.assertEqual(dataset["overview"]["total_video_count"], 1)
+        self.assertEqual(dataset["overview"]["total_exposure"], 1)
+        self.assertEqual(dataset["overview"]["actor_video_count"], 0)
+
+    def test_workbook_dataset_falls_back_to_univer_when_openpyxl_has_no_rows(self):
+        univer_rows = [
+            {
+                "source_sheet": "抖音A",
+                "headers": ["视频名称", "发布时间", "播放量", "5S完播率", "视频演员"],
+                "values": ["univer行", "2026/3/1", "100", "20%", "桂婕"],
+            }
+        ]
+
+        with patch.dict("os.environ", {"XINGTU_ENABLE_UNIVER_FALLBACK": "1"}), patch(
+            "app.metrics.rows_from_openpyxl", return_value=[]
+        ), patch("app.metrics.rows_from_univer", return_value=univer_rows):
+            dataset = build_dataset_from_workbook(Path("placeholder.xlsx"), "placeholder.xlsx")
+
+        self.assertEqual(dataset["overview"]["total_video_count"], 1)
+        self.assertEqual(dataset["overview"]["total_exposure"], 100)
         self.assertEqual(dataset["overview"]["actor_video_count"], 1)
 
     def test_univer_command_retries_replay_timeout(self):

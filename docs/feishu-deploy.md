@@ -25,7 +25,7 @@
 
 限制：当前服务是 Render Free Web Service，未挂载 persistent disk。上传后的数据在当前实例内可刷新展示，但实例重启或重新部署后可能回到默认数据，需要重新上传 Excel。若要作为长期生产入口，应升级到带 persistent disk 的 Render Blueprint 配置。
 
-上传 Excel 依赖 Docker 镜像内的 `univer-cli@0.1.25` 来读取 workbook-visible rows。不要移除 Dockerfile 中的 Univer 安装；如果上传解析不到有效视频行，接口会返回 422 并保留当前数据。
+上传 Excel 使用轻量 `openpyxl` 读取，并会重置不可信的 sheet 维度元数据来识别 WPS/Excel 的可见行；如果上传解析不到有效视频行，接口会返回 422 并保留当前数据。
 
 ## 推荐架构
 

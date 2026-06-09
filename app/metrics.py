@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -352,18 +353,19 @@ def build_overview(records: list[dict[str, Any]], actor_metrics: list[dict[str, 
 
 def rows_from_openpyxl(workbook_path: Path) -> list[dict[str, Any]]:
     workbook = load_workbook(workbook_path, read_only=True, data_only=True)
-    if all(sheet.max_row <= 1 and sheet.max_column <= 1 for sheet in workbook.worksheets):
-        return []
     rows: list[dict[str, Any]] = []
     for sheet in workbook.worksheets:
-        if sheet.title in EXCLUDED_SHEETS:
+        sheet_name = sheet.title
+        if sheet_name in EXCLUDED_SHEETS:
             continue
-        raw_rows = list(sheet.iter_rows(values_only=True))
-        if not raw_rows:
+        if hasattr(sheet, "reset_dimensions"):
+            sheet.reset_dimensions()
+        sheet_rows = sheet.iter_rows(values_only=True)
+        headers = next(sheet_rows, None)
+        if not headers:
             continue
-        headers = list(raw_rows[0])
-        for values in raw_rows[1:]:
-            rows.append({"source_sheet": sheet.title, "headers": headers, "values": list(values)})
+        for values in sheet_rows:
+            rows.append({"source_sheet": sheet_name, "headers": list(headers), "values": list(values)})
     return rows
 
 
@@ -399,9 +401,9 @@ def rows_from_univer(workbook_path: Path) -> list[dict[str, Any]]:
 
 
 def build_dataset_from_workbook(workbook_path: Path, source_file_name: str) -> dict[str, Any]:
-    rows = rows_from_univer(workbook_path)
-    if not rows:
-        rows = rows_from_openpyxl(workbook_path)
+    rows = rows_from_openpyxl(workbook_path)
+    if not rows and os.environ.get("XINGTU_ENABLE_UNIVER_FALLBACK") == "1":
+        rows = rows_from_univer(workbook_path)
     records, quality = normalize_records(rows)
     actor_metrics = build_actor_metrics(records)
     account_metrics = ensure_detail_sheet_accounts(build_account_metrics(records), quality)
