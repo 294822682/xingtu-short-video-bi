@@ -110,7 +110,7 @@ def check_dockerfile(results: dict[str, object]) -> None:
         "npm run build",
         "npm install -g univer-cli@0.1.25",
         "pip install --no-cache-dir -r requirements.txt",
-        "COPY --from=frontend /usr/local/bin/univer",
+        "ln -s /usr/local/lib/node_modules/univer-cli/bin/univer.js /usr/local/bin/univer",
         "uvicorn app.main:app",
     ]
     missing = [item for item in required if item not in dockerfile]
