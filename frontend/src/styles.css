@@ -139,12 +139,20 @@ input:focus-visible {
 .admin-link {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   min-height: 40px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: 0 var(--space-sm);
   color: #155d9f;
   background: var(--color-surface);
+}
+
+.admin-link.primary {
+  border-color: #6aaed8;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 700;
 }
 
 .tab-bar {
@@ -192,14 +200,78 @@ input:focus-visible {
 .panel,
 .kpi-card,
 .table-wrap,
-.admin-panel {
+.admin-panel,
+.pending-panel,
+.hub-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.hub-card {
+  min-height: 260px;
+  padding: 22px;
+}
+
+.hub-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  color: var(--color-primary-strong);
+  background: var(--color-primary-soft);
+}
+
+.hub-card h2 {
+  margin: 8px 0 10px;
+  color: var(--color-title);
+  font-size: 23px;
+}
+
+.hub-card p {
+  min-height: 56px;
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.hub-actions,
+.pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 18px 0 14px;
+}
+
 .overview-panel {
   padding: 20px;
+}
+
+.pending-panel {
+  min-height: 210px;
+  padding: 20px;
+}
+
+.pending-panel h2 {
+  margin: 14px 0 8px;
+  color: var(--color-title);
+  font-size: 24px;
+}
+
+.pending-panel p {
+  max-width: 720px;
+  color: var(--color-text-muted);
+  line-height: 1.7;
 }
 
 .section-label {
@@ -610,7 +682,8 @@ td {
   }
 
   .kpi-grid,
-  .rank-grid {
+  .rank-grid,
+  .hub-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -640,7 +713,8 @@ td {
   }
 
   .kpi-grid,
-  .rank-grid {
+  .rank-grid,
+  .hub-grid {
     grid-template-columns: 1fr;
   }
 

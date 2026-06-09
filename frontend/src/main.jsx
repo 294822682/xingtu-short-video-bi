@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, RefreshCw, TrendingDown, TrendingUp, UploadCloud } from "lucide-react";
+import { ArrowRight, BarChart3, Database, RefreshCw, TrendingDown, TrendingUp, UploadCloud } from "lucide-react";
 
-import { defaultDataset } from "./sampleData.js";
+import { BI_MODULES } from "./modules.js";
+import { routeFromPath } from "./routing.js";
+import { sampleDatasets } from "./sampleData.js";
 import { formatBusinessNumber, formatInteger } from "../formatters.js";
 import "./styles.css";
 
@@ -10,19 +12,65 @@ const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? "" : "
 const PLATFORM_FILTERS = ["全部", "抖音", "视频号", "小红书"];
 
 function App() {
-  const isAdmin = window.location.pathname.startsWith("/admin");
-  return isAdmin ? <AdminPage /> : <DashboardPage />;
+  const route = routeFromPath(window.location.pathname);
+  if (route.view === "hub") return <HubPage />;
+  if (route.view === "admin") return <AdminPage module={route.module} />;
+  return <DashboardPage module={route.module} />;
 }
 
-function DashboardPage() {
-  const [dataset, setDataset] = useState(defaultDataset);
+function HubPage() {
+  useEffect(() => {
+    document.title = "经营 BI Hub";
+  }, []);
+
+  return (
+    <main className="app-shell">
+      <header className="top-header">
+        <div>
+          <span className="eyebrow">OPERATIONS BI HUB</span>
+          <h1>经营 BI Hub</h1>
+        </div>
+        <div className="header-meta">
+          <span>共用一个 Render Web Service</span>
+          <Badge text="模块隔离" tone="success" />
+        </div>
+      </header>
+      <section className="hub-grid" aria-label="BI 模块入口">
+        {BI_MODULES.map((module) => (
+          <article className="hub-card" key={module.slug}>
+            <div className="hub-icon">
+              <Database size={22} />
+            </div>
+            <span className="eyebrow">{module.eyebrow}</span>
+            <h2>{module.name}</h2>
+            <p>{module.description}</p>
+            <div className="hub-actions">
+              <a className="admin-link primary" href={module.dashboardPath}>
+                打开看板 <ArrowRight size={16} />
+              </a>
+              <a className="admin-link" href={module.adminPath}>数据维护</a>
+            </div>
+            <Badge text={module.uploadEnabled ? "已接入上传" : "待接入口径"} tone={module.uploadEnabled ? "success" : "warning"} />
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
+function DashboardPage({ module }) {
+  const [dataset, setDataset] = useState(sampleDatasets[module.slug] || sampleDatasets.xingtu);
   const [status, setStatus] = useState("using-default");
   const [platform, setPlatform] = useState("全部");
 
   useEffect(() => {
+    document.title = module.name;
+  }, [module.name]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${API_BASE}/api/short-video/overview`, { signal: controller.signal })
+    fetch(`${API_BASE}/api/bi/${module.slug}/overview`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("API unavailable");
         return response.json();
@@ -36,7 +84,7 @@ function DashboardPage() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [module.slug]);
 
   const accountRows = useMemo(() => {
     if (platform === "全部") return dataset.account_metrics;
@@ -45,11 +93,13 @@ function DashboardPage() {
   const videoRankings = dataset.video_rankings || { top: null, bottom: null };
 
   const overview = dataset.overview;
+  const isPending = overview.module_status === "pending_source_contract";
 
   return (
     <main className="app-shell">
-      <Header dataset={dataset} status={status} />
+      <Header dataset={dataset} status={status} module={module} />
       <nav className="tab-bar" aria-label="报表导航">
+        <a href="/hub">BI Hub</a>
         <a href="#overview">总览驾驶舱</a>
         <a href="#rank">曝光榜单</a>
         <a href="#accounts">账号表现</a>
@@ -59,71 +109,89 @@ function DashboardPage() {
       <section id="overview" className="hero-grid">
         <div className="overview-panel">
           <div className="section-label">经营总览</div>
-          <h2>账号曝光与演员拍摄经营看板</h2>
-          <p>面向飞书固定入口的浅色企业 BI，聚焦账号曝光、发布表现和演员贡献。</p>
+          <h2>{module.name}</h2>
+          <p>{module.description}</p>
         </div>
-        <KpiGrid overview={overview} />
+        {isPending ? <PendingPanel module={module} /> : <KpiGrid overview={overview} />}
       </section>
 
-      <section id="rank" className="rank-grid">
-        <RankCard title="视频曝光 Top1" row={videoRankings.top} icon={<TrendingUp size={20} />} tone="top" />
-        <RankCard title="视频曝光 Bot1" row={videoRankings.bottom} icon={<TrendingDown size={20} />} tone="bottom" />
-      </section>
+      {!isPending && (
+        <>
+          <section id="rank" className="rank-grid">
+            <RankCard title="视频曝光 Top1" row={videoRankings.top} icon={<TrendingUp size={20} />} tone="top" />
+            <RankCard title="视频曝光 Bot1" row={videoRankings.bottom} icon={<TrendingDown size={20} />} tone="bottom" />
+          </section>
 
-      <section className="chart-grid">
-        <ChartPanel title="账号曝光排行" rows={accountRows.slice(0, 8)} labelKey="account_name" valueKey="exposure" />
-        <ChartPanel title="演员拍摄排行" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="video_count" compact />
-      </section>
+          <section className="chart-grid">
+            <ChartPanel title="账号曝光排行" rows={accountRows.slice(0, 8)} labelKey="account_name" valueKey="exposure" />
+            <ChartPanel title="演员拍摄排行" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="video_count" compact />
+          </section>
 
-      <section id="accounts" className="report-section">
-        <SectionHeader title="账号表现" subtitle="按账号查看发布数量、曝光规模和演员参与情况。" />
-        <div className="toolbar">
-          {PLATFORM_FILTERS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={platform === item ? "active" : ""}
-              aria-pressed={platform === item}
-              onClick={() => setPlatform(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-        <div className="chart-grid secondary">
-          <ChartPanel title="各账号发布条数" rows={accountRows} labelKey="account_name" valueKey="video_count" compact />
-          <ChartPanel title="平均曝光对比" rows={accountRows} labelKey="account_name" valueKey="average_exposure" compact />
-        </div>
-        <AccountTable rows={accountRows} />
-      </section>
+          <section id="accounts" className="report-section">
+            <SectionHeader title="账号表现" subtitle="按账号查看发布数量、曝光规模和演员参与情况。" />
+            <div className="toolbar">
+              {PLATFORM_FILTERS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={platform === item ? "active" : ""}
+                  aria-pressed={platform === item}
+                  onClick={() => setPlatform(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="chart-grid secondary">
+              <ChartPanel title="各账号发布条数" rows={accountRows} labelKey="account_name" valueKey="video_count" compact />
+              <ChartPanel title="平均曝光对比" rows={accountRows} labelKey="account_name" valueKey="average_exposure" compact />
+            </div>
+            <AccountTable rows={accountRows} />
+          </section>
 
-      <section id="actors" className="report-section">
-        <SectionHeader title="演员表现" subtitle="按演员查看拍摄条数、覆盖账号和带来的曝光表现。" />
-        <div className="chart-grid secondary">
-          <ChartPanel title="演员贡献曝光排行" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="contributed_exposure" />
-          <ChartPanel title="参与账号数对比" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="account_count" compact />
-        </div>
-        <ActorTable rows={dataset.actor_metrics} />
-      </section>
+          <section id="actors" className="report-section">
+            <SectionHeader title="演员表现" subtitle="按演员查看拍摄条数、覆盖账号和带来的曝光表现。" />
+            <div className="chart-grid secondary">
+              <ChartPanel title="演员贡献曝光排行" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="contributed_exposure" />
+              <ChartPanel title="参与账号数对比" rows={dataset.actor_metrics.slice(0, 8)} labelKey="actor_name" valueKey="account_count" compact />
+            </div>
+            <ActorTable rows={dataset.actor_metrics} />
+          </section>
+        </>
+      )}
     </main>
   );
 }
 
-function Header({ dataset, status }) {
+function Header({ dataset, status, module }) {
   const live = status === "live";
   return (
     <header className="top-header">
       <div>
-        <span className="eyebrow">XINGTU SHORT VIDEO BI</span>
-        <h1>星途短视频经营 BI</h1>
+        <span className="eyebrow">{module.eyebrow}</span>
+        <h1>{module.name}</h1>
       </div>
       <div className="header-meta">
         <span>{dataset.overview.source_file_name}</span>
         <span>{dataset.overview.generated_at}</span>
         <Badge text={live ? "已刷新" : "样例数据"} tone={live ? "success" : "neutral"} />
-        <a className="admin-link" href="/admin">数据维护</a>
+        <a className="admin-link" href={module.adminPath}>数据维护</a>
       </div>
     </header>
+  );
+}
+
+function PendingPanel({ module }) {
+  return (
+    <section className="pending-panel" aria-label={`${module.name} 待接入`}>
+      <Badge text="待接入口径" tone="warning" />
+      <h2>已预留独立入口，等待 OAE 数据源</h2>
+      <p>{module.adminDescription}</p>
+      <div className="pending-actions">
+        <a className="admin-link primary" href={module.adminPath}>查看维护入口</a>
+        <a className="admin-link" href="/hub">返回 BI Hub</a>
+      </div>
+    </section>
   );
 }
 
@@ -270,13 +338,23 @@ function ActorTable({ rows }) {
   );
 }
 
-function AdminPage() {
+function AdminPage({ module }) {
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState("选择 Excel 后上传，系统会重新生成 BI 数据。");
+  const [message, setMessage] = useState(
+    module.uploadEnabled ? "选择 Excel 后上传，系统会重新生成 BI 数据。" : "该模块上传入口已预留，等待确认 OAE 报表字段口径。"
+  );
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    document.title = `${module.shortName}数据维护`;
+  }, [module.shortName]);
 
   async function handleUpload(event) {
     event.preventDefault();
+    if (!module.uploadEnabled) {
+      setMessage("OAE 解析口径尚未配置，不能套用星途短视频上传逻辑。");
+      return;
+    }
     if (!file) {
       setMessage("请先选择 .xlsx 文件。");
       return;
@@ -285,7 +363,7 @@ function AdminPage() {
     const body = new FormData();
     body.append("file", file);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/upload`, { method: "POST", body });
+      const response = await fetch(`${API_BASE}/api/bi/${module.slug}/admin/upload`, { method: "POST", body });
       if (!response.ok) throw new Error(await response.text());
       const payload = await response.json();
       setMessage(`刷新完成：${payload.overview.total_video_count} 条视频，${formatBusinessNumber(payload.overview.total_exposure)} 曝光。`);
@@ -301,18 +379,18 @@ function AdminPage() {
       <header className="top-header">
         <div>
           <span className="eyebrow">DATA MAINTENANCE</span>
-          <h1>数据维护</h1>
+          <h1>{module.shortName}数据维护</h1>
         </div>
-        <a className="admin-link" href="/">返回 BI</a>
+        <a className="admin-link" href={module.dashboardPath}>返回 BI</a>
       </header>
       <section className="admin-panel">
         <UploadCloud size={34} />
         <h2>上传或替换 Excel</h2>
-        <p>首版采用手动上传刷新。原始文件不会被修改，系统会生成新的看板数据和汇总指标。</p>
+        <p>{module.adminDescription}</p>
         <form onSubmit={handleUpload} aria-busy={busy}>
           <label className="sr-only" htmlFor="excel-upload">选择 Excel 文件</label>
-          <input id="excel-upload" type="file" accept=".xlsx" required onChange={(event) => setFile(event.target.files?.[0] || null)} />
-          <button type="submit" disabled={busy}>
+          <input id="excel-upload" type="file" accept=".xlsx" required disabled={!module.uploadEnabled} onChange={(event) => setFile(event.target.files?.[0] || null)} />
+          <button type="submit" disabled={busy || !module.uploadEnabled}>
             {busy ? <RefreshCw size={16} className="spin" /> : <UploadCloud size={16} />}
             {busy ? "刷新中" : "上传并刷新"}
           </button>

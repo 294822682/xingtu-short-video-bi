@@ -2,7 +2,7 @@ import unittest
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from app.storage import load_dataset, save_dataset
+from app.storage import dataset_path_from_env, load_dataset, save_dataset
 
 
 class StorageTest(unittest.TestCase):
@@ -28,6 +28,18 @@ class StorageTest(unittest.TestCase):
 
         self.assertEqual(loaded["overview"]["source_file_name"], "测试文件.xlsx")
         self.assertEqual(loaded["overview"]["total_exposure"], 12226000)
+
+    def test_oae_default_dataset_is_separate_from_xingtu(self):
+        dataset = load_dataset(module_slug="oae")
+
+        self.assertEqual(dataset["overview"]["module_status"], "pending_source_contract")
+        self.assertEqual(dataset["overview"]["total_exposure"], 0)
+
+    def test_dataset_path_from_env_keeps_xingtu_backward_compatible(self):
+        with TemporaryDirectory() as tmp:
+            with unittest.mock.patch.dict("os.environ", {"XINGTU_DATA_DIR": tmp}, clear=False):
+                self.assertEqual(dataset_path_from_env("xingtu"), Path(tmp) / "dataset.json")
+                self.assertEqual(dataset_path_from_env("oae"), Path(tmp) / "oae_dataset.json")
 
 
 if __name__ == "__main__":

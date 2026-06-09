@@ -144,3 +144,35 @@ DEFAULT_DATASET = {
         "notes": ["视频号 5S 未提供", "演员曝光不平摊"],
     },
 }
+
+DEFAULT_OAE_DATASET = {
+    "overview": {
+        "total_video_count": 0,
+        "total_exposure": 0,
+        "overall_5s_completion_rate": None,
+        "overall_5s_completion_rate_display": "未提供",
+        "actor_video_count": 0,
+        "actor_count": 0,
+        "quality_status": "等待 OAE 报表口径",
+        "source_file_name": "待上传",
+        "generated_at": "未生成",
+        "module_status": "pending_source_contract",
+    },
+    "account_metrics": [],
+    "actor_metrics": [],
+    "video_rankings": {"top": None, "bottom": None},
+    "quality_report": {
+        "used_sheets": [],
+        "excluded_sheets": [],
+        "missing_fields": {},
+        "sheet_issues": {"OAE": ["等待确认 OAE BI 报表字段口径"]},
+        "invalid_values": {},
+        "sheets_without_5s_completion": [],
+        "notes": ["OAE 数据源与星途短视频口径隔离", "未确认字段前不套用星途解析器"],
+    },
+}
+
+DEFAULT_DATASETS = {
+    "xingtu": DEFAULT_DATASET,
+    "oae": DEFAULT_OAE_DATASET,
+}

@@ -2,13 +2,20 @@
 
 ## 目标
 
-把当前本地 BI 固定成一个可放入飞书网页应用的稳定 HTTPS 入口。生产环境只暴露一个站点：
+把当前本地 BI 固定成一个可放入飞书网页应用的稳定 HTTPS 入口。生产环境共用一个 Render Web Service，并用路由区分 BI 模块：
 
-- `/`：BI 总览
-- `/admin`：手动上传或替换 Excel
+- `/hub`：BI Hub
+- `/`、`/xingtu`：星途短视频 BI
+- `/admin`、`/admin/xingtu`：星途手动上传或替换 Excel
+- `/oae`：OAE BI 预留入口
+- `/admin/oae`：OAE 数据维护预留入口
 - `/api/health`：健康检查
-- `/api/short-video/overview`：看板数据
-- `/api/admin/upload`：上传刷新
+- `/api/modules`：BI 模块列表
+- `/api/bi/xingtu/overview`：星途看板数据
+- `/api/bi/xingtu/admin/upload`：星途上传刷新
+- `/api/bi/oae/overview`：OAE 预留数据
+
+保留 `/api/short-video/overview` 与 `/api/admin/upload` 作为星途旧接口兼容。
 
 ## 当前线上入口
 
@@ -33,8 +40,9 @@
 
 1. Vite 构建前端到 `dist/`。
 2. FastAPI 同时服务 `/api/*` 和 `dist/` 静态文件。
-3. 飞书只内嵌一个 HTTPS URL，例如 `https://xingtu-short-video-bi.onrender.com/`。
-4. 上传后的数据写入 `XINGTU_DATA_DIR/dataset.json`。
+3. 飞书可分别内嵌同一 HTTPS 域名下的不同路由，例如 `/xingtu` 与 `/oae`。
+4. 星途上传后的数据写入 `BI_DATA_DIR/dataset.json`，兼容旧环境变量 `XINGTU_DATA_DIR/dataset.json`。
+5. OAE 预留数据写入 `BI_DATA_DIR/oae_dataset.json`；未确认字段口径前，不启用上传解析。
 
 这样可以避免飞书 iframe 内的跨域、混合内容和 API 域名不一致问题。
 
@@ -65,7 +73,7 @@ render services create \
   -o json
 ```
 
-长期生产建议使用 `render.yaml` Blueprint，挂载 1GB persistent disk 到 `/data`，并设置 `XINGTU_DATA_DIR=/data/current`。
+长期生产建议使用 `render.yaml` Blueprint，挂载 1GB persistent disk 到 `/data`，并设置 `BI_DATA_DIR=/data/current`，同时保留 `XINGTU_DATA_DIR=/data/current` 兼容旧路径。
 
 前置条件：
 
@@ -77,6 +85,7 @@ render services create \
 
 Render 环境变量：
 
+- `BI_DATA_DIR=/data/current`
 - `XINGTU_DATA_DIR=/data/current`
 - `PORT` 由 Render 自动提供，Docker CMD 会读取。
 

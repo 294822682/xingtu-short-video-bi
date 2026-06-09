@@ -20,10 +20,62 @@ class ApiTest(unittest.TestCase):
         self.assertIn("actor_metrics", payload)
         self.assertIn("video_rankings", payload)
         self.assertIn("quality_report", payload)
+        self.assertEqual(payload["module"]["slug"], "xingtu")
         self.assertEqual(payload["overview"]["total_video_count"], 320)
         self.assertEqual(payload["overview"]["total_exposure"], 12226000)
         self.assertIn("video_title", payload["video_rankings"]["top"])
         self.assertIn("video_title", payload["video_rankings"]["bottom"])
+
+    def test_modules_endpoint_exposes_hub_entries(self):
+        client = TestClient(app)
+
+        response = client.get("/api/modules")
+
+        self.assertEqual(response.status_code, 200)
+        modules = {item["slug"]: item for item in response.json()["modules"]}
+        self.assertEqual(modules["xingtu"]["dashboard_path"], "/xingtu")
+        self.assertEqual(modules["xingtu"]["admin_path"], "/admin/xingtu")
+        self.assertTrue(modules["xingtu"]["upload_enabled"])
+        self.assertEqual(modules["oae"]["dashboard_path"], "/oae")
+        self.assertFalse(modules["oae"]["upload_enabled"])
+
+    def test_module_overview_keeps_oae_as_pending_without_fabricated_metrics(self):
+        client = TestClient(app)
+
+        response = client.get("/api/bi/oae/overview")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["module"]["slug"], "oae")
+        self.assertEqual(payload["overview"]["module_status"], "pending_source_contract")
+        self.assertEqual(payload["overview"]["total_exposure"], 0)
+        self.assertEqual(payload["account_metrics"], [])
+
+    def test_oae_upload_is_blocked_until_source_contract_exists(self):
+        client = TestClient(app)
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "OAE测试"
+        sheet.append(["字段", "数值"])
+        sheet.append(["曝光", 1000])
+
+        with NamedTemporaryFile(suffix=".xlsx") as tmp:
+            workbook.save(tmp.name)
+            tmp.seek(0)
+            response = client.post(
+                "/api/bi/oae/admin/upload",
+                files={"file": ("oae.xlsx", tmp, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("尚未配置", response.json()["detail"])
+
+    def test_unknown_module_returns_404(self):
+        client = TestClient(app)
+
+        response = client.get("/api/bi/unknown/overview")
+
+        self.assertEqual(response.status_code, 404)
 
     def test_upload_endpoint_accepts_excel_file(self):
         client = TestClient(app)

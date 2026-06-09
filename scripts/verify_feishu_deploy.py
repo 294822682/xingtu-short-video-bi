@@ -87,20 +87,36 @@ def verify(base_url: str, upload: bool) -> dict[str, object]:
             raise AssertionError(f"health status mismatch: {health.text}")
         results["health"] = "ok"
 
-        home = client.get(absolute_url(base_url, "/"))
-        assert_response(home, "home")
-        assert_iframe_allowed(home, "home")
-        if 'id="root"' not in home.text or "/assets/" not in home.text:
-            raise AssertionError("home HTML missing React root or production asset path")
-        results["home"] = "ok"
-
-        admin = client.get(absolute_url(base_url, "/admin"))
-        assert_response(admin, "admin")
-        assert_iframe_allowed(admin, "admin")
-        if 'id="root"' not in admin.text or "/assets/" not in admin.text:
-            raise AssertionError("admin HTML missing React root or production asset path")
-        results["admin"] = "ok"
+        for label, path in {
+            "home": "/",
+            "hub": "/hub",
+            "xingtu": "/xingtu",
+            "oae": "/oae",
+            "admin": "/admin",
+            "admin_xingtu": "/admin/xingtu",
+            "admin_oae": "/admin/oae",
+        }.items():
+            page = client.get(absolute_url(base_url, path))
+            assert_response(page, label)
+            assert_iframe_allowed(page, label)
+            if 'id="root"' not in page.text or "/assets/" not in page.text:
+                raise AssertionError(f"{label} HTML missing React root or production asset path")
+            results[label] = "ok"
         results["iframe_headers"] = "ok"
+
+        modules = client.get(absolute_url(base_url, "/api/modules"))
+        assert_response(modules, "modules")
+        module_payload = modules.json()
+        module_slugs = {item["slug"] for item in module_payload.get("modules", [])}
+        if module_slugs != {"xingtu", "oae"}:
+            raise AssertionError(f"module list mismatch: {module_payload}")
+        results["modules"] = "ok"
+
+        oae_overview = client.get(absolute_url(base_url, "/api/bi/oae/overview"))
+        assert_response(oae_overview, "oae_overview")
+        if oae_overview.json()["overview"].get("module_status") != "pending_source_contract":
+            raise AssertionError("OAE should remain pending until its source contract is configured")
+        results["oae_pending_contract"] = "ok"
 
         overview_before = client.get(absolute_url(base_url, "/api/short-video/overview"))
         assert_response(overview_before, "overview_before")
@@ -114,7 +130,7 @@ def verify(base_url: str, upload: bool) -> dict[str, object]:
             try:
                 with workbook_path.open("rb") as workbook:
                     upload_response = client.post(
-                        absolute_url(base_url, "/api/admin/upload"),
+                        absolute_url(base_url, "/api/bi/xingtu/admin/upload"),
                         files={
                             "file": (
                                 "feishu-deploy-smoke.xlsx",

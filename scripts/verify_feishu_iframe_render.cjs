@@ -78,7 +78,11 @@ async function main() {
     const page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
     const checks = [];
     checks.push(await verifyTarget({ page, baseUrl, path: "/", expectedText: "星途短视频经营 BI", minHeight: 500 }));
+    checks.push(await verifyTarget({ page, baseUrl, path: "/hub", expectedText: "经营 BI Hub", minHeight: 350 }));
+    checks.push(await verifyTarget({ page, baseUrl, path: "/xingtu", expectedText: "星途短视频经营 BI", minHeight: 500 }));
+    checks.push(await verifyTarget({ page, baseUrl, path: "/oae", expectedText: "已预留独立入口", minHeight: 350 }));
     checks.push(await verifyTarget({ page, baseUrl, path: "/admin", expectedText: "上传或替换 Excel", minHeight: 350 }));
+    checks.push(await verifyTarget({ page, baseUrl, path: "/admin/oae", expectedText: "等待确认 OAE", minHeight: 350 }));
     console.log(JSON.stringify({ status: "ok", iframe_dom: "ok", checks }, null, 2));
   } finally {
     await browser.close();

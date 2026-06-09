@@ -1,6 +1,6 @@
 # xingtu-short-video-bi
 
-星途短视频经营 BI 独立网页应用。
+星途短视频经营 BI 独立网页应用，并预留为一个 Render Web Service 承载多个 BI 模块的 Hub。
 
 首版目标：
 
@@ -8,6 +8,18 @@
 - 支持手动上传/替换 Excel 后重新生成数据。
 - 通过飞书固定网页应用入口访问。
 - 保持账号维度和演员维度两张核心汇总表口径稳定。
+
+## BI Hub 路由
+
+当前共用同一个 Render Web Service，不新建第二个 Render 服务。
+
+- Hub 入口：`/hub`
+- 星途短视频 BI：`/` 和 `/xingtu`
+- 星途数据维护：`/admin` 和 `/admin/xingtu`
+- OAE BI 预留入口：`/oae`
+- OAE 数据维护预留入口：`/admin/oae`
+
+`/` 与 `/admin` 保持向后兼容，避免已配置的飞书网页应用入口失效。OAE 当前只完成入口和数据隔离，未确认 OAE 报表字段口径前，不使用星途短视频解析器处理 OAE 文件。
 
 ## 当前口径
 
@@ -52,7 +64,7 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 ## 生产部署
 
-首版生产形态为单服务同源部署：FastAPI 同时提供 `/api/*` 和 Vite 构建后的前端静态文件，适合飞书 iframe 内嵌。
+首版生产形态为单服务同源部署：FastAPI 同时提供 `/api/*` 和 Vite 构建后的前端静态文件，适合飞书 iframe 内嵌。该服务现在可作为 BI Hub 使用，用不同路由隔离不同 BI 模块。
 
 当前已部署入口：
 

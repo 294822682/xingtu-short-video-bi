@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test frontend/**/*.test.js"
+    "test": "node --test frontend/*.test.js frontend/**/*.test.js"
   },
   "dependencies": {
     "react": "^19.2.1",

@@ -6,6 +6,8 @@ services:
     dockerContext: .
     healthCheckPath: /api/health
     envVars:
+      - key: BI_DATA_DIR
+        value: /data/current
       - key: XINGTU_DATA_DIR
         value: /data/current
     disk:
