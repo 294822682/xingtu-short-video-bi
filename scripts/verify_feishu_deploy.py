@@ -99,7 +99,10 @@ def verify(base_url: str, upload: bool) -> dict[str, object]:
             page = client.get(absolute_url(base_url, path))
             assert_response(page, label)
             assert_iframe_allowed(page, label)
-            if 'id="root"' not in page.text or "/assets/" not in page.text:
+            if label == "oae":
+                if "运营日报 BI" not in page.text or 'data-dashboard-mode="business"' not in page.text:
+                    raise AssertionError("oae HTML should serve the original OAE operations daily BI shell")
+            elif 'id="root"' not in page.text or "/assets/" not in page.text:
                 raise AssertionError(f"{label} HTML missing React root or production asset path")
             results[label] = "ok"
         results["iframe_headers"] = "ok"
@@ -124,6 +127,31 @@ def verify(base_url: str, upload: bool) -> dict[str, object]:
         results["oae_dashboard_source"] = {
             "report_date": oae_payload["overview"].get("report_date"),
             "lead_accounts": len(oae_payload["oae_dashboard"]["lead_accounts"]),
+        }
+
+        oae_daily = client.get(absolute_url(base_url, "/dashboard/daily/latest"))
+        assert_response(oae_daily, "oae_daily_latest")
+        daily_payload = oae_daily.json()
+        if daily_payload.get("report_date") != oae_payload["overview"].get("report_date"):
+            raise AssertionError("OAE daily report date mismatch between Hub and original dashboard API")
+        if "lead_anchors" not in daily_payload or "seed_anchors" not in daily_payload:
+            raise AssertionError("OAE original dashboard API missing anchor payloads")
+
+        oae_feishu_link = client.get(absolute_url(base_url, "/dashboard/daily/latest/feishu-link"))
+        assert_response(oae_feishu_link, "oae_feishu_link")
+        assert_iframe_allowed(oae_feishu_link, "oae_feishu_link")
+        if "今日判断" not in oae_feishu_link.text or 'data-dashboard-mode="business"' not in oae_feishu_link.text:
+            raise AssertionError("OAE Feishu link should render original business dashboard shell")
+
+        oae_trends = client.get(absolute_url(base_url, "/dashboard/daily/trends"), params={"end_date": daily_payload["report_date"]})
+        assert_response(oae_trends, "oae_trends")
+        trends_payload = oae_trends.json()
+        if not trends_payload.get("daily_trends"):
+            raise AssertionError("OAE trends API should include daily_trends")
+        results["oae_original_dashboard"] = {
+            "report_date": daily_payload.get("report_date"),
+            "lead_anchors": len(daily_payload.get("lead_anchors", [])),
+            "daily_trends": len(trends_payload.get("daily_trends", [])),
         }
 
         overview_before = client.get(absolute_url(base_url, "/api/short-video/overview"))

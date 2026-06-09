@@ -16,10 +16,11 @@
 - Hub 入口：`/hub`
 - 星途短视频 BI：`/` 和 `/xingtu`
 - 星途数据维护：`/admin` 和 `/admin/xingtu`
-- OAE BI：`/oae`
+- OAE 运营日报 BI：`/oae`，等价于 OAE 原看板 `/dashboard/daily/latest/feishu-link`
 - OAE 数据说明：`/admin/oae`
 
 `/` 与 `/admin` 保持向后兼容，避免已配置的飞书网页应用入口失效。OAE 不使用星途短视频解析器，也不接收原始 Excel 上传；它读取 Operations Analytics Engine pipeline 已产出的 `feishu_dashboard_source_latest_*.tsv`。
+OAE 页面保留 Operations Analytics Engine 线程里的“运营日报 BI”看板结构，包括今日判断、经营链路、维度工作台、主播、种草、历史趋势和月度对比；当前仓库只提供最终 TSV 到该看板 API 的轻量 adapter。
 
 ## 当前口径
 
@@ -71,6 +72,7 @@ npm run dev -- --host 127.0.0.1 --port 5174
 - BI 页面：https://xingtu-short-video-bi.onrender.com/
 - BI Hub：https://xingtu-short-video-bi.onrender.com/hub
 - OAE BI：https://xingtu-short-video-bi.onrender.com/oae
+- OAE 原看板 API：https://xingtu-short-video-bi.onrender.com/dashboard/daily/latest
 - 数据维护：https://xingtu-short-video-bi.onrender.com/admin
 - Render Dashboard：https://dashboard.render.com/web/srv-d8jab01kh4rs73dfrnig
 

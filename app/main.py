@@ -6,11 +6,13 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.metrics import build_dataset_from_workbook
 from app.modules import BI_MODULES, DEFAULT_MODULE_SLUG, module_list, normalize_module_slug, public_module_config
+from app.oae_dashboard import load_oae_daily_dashboard_payload, load_oae_trends_payload
+from app.oae_feishu_dashboard_interactive_html import render_feishu_link_trial_dashboard_html, render_trend_dashboard_html
 from app.storage import load_dataset, save_dataset
 
 app = FastAPI(title="Operations BI Hub")
@@ -76,6 +78,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/healthz")
+def oae_healthz() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/api/modules")
 def modules() -> dict[str, list[dict]]:
     return {"modules": module_list()}
@@ -99,6 +106,51 @@ def overview() -> dict:
 @app.post("/api/admin/upload")
 async def upload(file: UploadFile = File(...)) -> dict:
     return await upload_for_module(DEFAULT_MODULE_SLUG, file)
+
+
+@app.get("/oae", response_class=HTMLResponse, include_in_schema=False)
+def oae_dashboard() -> HTMLResponse:
+    return HTMLResponse(render_feishu_link_trial_dashboard_html("latest", api_path="/dashboard/daily/latest"))
+
+
+@app.get("/dashboard/daily/latest/feishu-link", response_class=HTMLResponse)
+def oae_latest_feishu_link() -> HTMLResponse:
+    return HTMLResponse(render_feishu_link_trial_dashboard_html("latest", api_path="/dashboard/daily/latest"))
+
+
+@app.get("/dashboard/daily/trends/prototype", response_class=HTMLResponse)
+def oae_trends_prototype(start_date: str | None = None, end_date: str | None = None) -> HTMLResponse:
+    query = []
+    if start_date:
+        query.append(f"start_date={start_date}")
+    if end_date:
+        query.append(f"end_date={end_date}")
+    api_path = "/dashboard/daily/trends" + (f"?{'&'.join(query)}" if query else "")
+    return HTMLResponse(render_trend_dashboard_html(api_path=api_path))
+
+
+@app.get("/dashboard/daily/trends")
+def oae_trends(start_date: str | None = None, end_date: str | None = None) -> dict:
+    try:
+        return load_oae_trends_payload(start_date=start_date, end_date=end_date)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/dashboard/daily/latest")
+def oae_daily_latest() -> dict:
+    try:
+        return load_oae_daily_dashboard_payload("latest")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/dashboard/daily/{report_date}")
+def oae_daily_report(report_date: str) -> dict:
+    try:
+        return load_oae_daily_dashboard_payload(report_date)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 if INDEX_FILE.exists():

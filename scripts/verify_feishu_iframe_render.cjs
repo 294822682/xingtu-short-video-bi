@@ -19,7 +19,7 @@ function targetUrl(baseUrl, path) {
   return new URL(path.replace(/^\//, ""), normalizedBase).toString();
 }
 
-async function verifyTarget({ page, baseUrl, path, expectedText, minHeight }) {
+async function verifyTarget({ page, baseUrl, path, expectedText, minHeight, rootSelector = "#root" }) {
   const url = targetUrl(baseUrl, path);
   const iframeHtml = `<!doctype html><html><body style="margin:0"><iframe title="feishu-smoke" src="${url}" style="width:${DEFAULT_IFRAME.width}px;height:${DEFAULT_IFRAME.height}px;border:0"></iframe></body></html>`;
   await page.setContent(
@@ -33,13 +33,13 @@ async function verifyTarget({ page, baseUrl, path, expectedText, minHeight }) {
   }
 
   await frame.waitForLoadState("domcontentloaded", { timeout: FRAME_TIMEOUT_MS });
-  await frame.waitForSelector("#root", { state: "attached", timeout: FRAME_TIMEOUT_MS });
+  await frame.waitForSelector(rootSelector, { state: "attached", timeout: FRAME_TIMEOUT_MS });
   await frame.waitForFunction(
     (text) => document.body?.innerText.includes(text),
     expectedText,
     { timeout: FRAME_TIMEOUT_MS },
   );
-  const rootBox = await frame.locator("#root").boundingBox();
+  const rootBox = await frame.locator(rootSelector).boundingBox();
   if (!rootBox || rootBox.width < 1000 || rootBox.height < minHeight) {
     const bodyText = await frame.locator("body").innerText().catch(() => "");
     throw new Error(`${path} rendered with unexpected root box: ${JSON.stringify(rootBox)}; body=${bodyText.slice(0, 300)}`);
@@ -49,6 +49,7 @@ async function verifyTarget({ page, baseUrl, path, expectedText, minHeight }) {
     path,
     url,
     expectedText,
+    rootSelector,
     rootBox,
   };
 }
@@ -80,7 +81,7 @@ async function main() {
     checks.push(await verifyTarget({ page, baseUrl, path: "/", expectedText: "星途短视频经营 BI", minHeight: 500 }));
     checks.push(await verifyTarget({ page, baseUrl, path: "/hub", expectedText: "经营 BI Hub", minHeight: 350 }));
     checks.push(await verifyTarget({ page, baseUrl, path: "/xingtu", expectedText: "星途短视频经营 BI", minHeight: 500 }));
-    checks.push(await verifyTarget({ page, baseUrl, path: "/oae", expectedText: "OAE 经营日报", minHeight: 500 }));
+    checks.push(await verifyTarget({ page, baseUrl, path: "/oae", expectedText: "运营日报 BI", minHeight: 900, rootSelector: 'body[data-dashboard-mode="business"]' }));
     checks.push(await verifyTarget({ page, baseUrl, path: "/admin", expectedText: "上传或替换 Excel", minHeight: 350 }));
     checks.push(await verifyTarget({ page, baseUrl, path: "/admin/oae", expectedText: "只读展示最终 dashboard source", minHeight: 350 }));
     console.log(JSON.stringify({ status: "ok", iframe_dom: "ok", checks }, null, 2));

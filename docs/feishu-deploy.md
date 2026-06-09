@@ -7,13 +7,16 @@
 - `/hub`：BI Hub
 - `/`、`/xingtu`：星途短视频 BI
 - `/admin`、`/admin/xingtu`：星途手动上传或替换 Excel
-- `/oae`：OAE 经营 BI
+- `/oae`：OAE 原“运营日报 BI”
 - `/admin/oae`：OAE 数据源说明入口
 - `/api/health`：健康检查
 - `/api/modules`：BI 模块列表
 - `/api/bi/xingtu/overview`：星途看板数据
 - `/api/bi/xingtu/admin/upload`：星途上传刷新
 - `/api/bi/oae/overview`：OAE dashboard source 数据
+- `/dashboard/daily/latest/feishu-link`：OAE 原飞书内嵌看板 HTML
+- `/dashboard/daily/latest`：OAE 原看板只读 JSON
+- `/dashboard/daily/trends`：OAE 原看板历史趋势 JSON
 
 保留 `/api/short-video/overview` 与 `/api/admin/upload` 作为星途旧接口兼容。
 
@@ -43,6 +46,7 @@
 3. 飞书可分别内嵌同一 HTTPS 域名下的不同路由，例如 `/xingtu` 与 `/oae`。
 4. 星途上传后的数据写入 `BI_DATA_DIR/dataset.json`，兼容旧环境变量 `XINGTU_DATA_DIR/dataset.json`。
 5. OAE 读取 `feishu_dashboard_source_latest_*.tsv`；默认使用打包在 `data/oae/sql_reports/` 的只读数据，也可通过 `OAE_DASHBOARD_SOURCE_DIR` 或 `BI_DATA_DIR/oae/sql_reports/` 覆盖为运行时数据。
+6. `/oae` 保留 OAE 原“运营日报 BI”HTML shell 和 `/dashboard/daily/*` API surface；当前仓库只做最终 TSV 到原看板 payload 的轻量 adapter，不把它改成星途/Hub 自绘页面。
 
 这样可以避免飞书 iframe 内的跨域、混合内容和 API 域名不一致问题，同时避免把 OAE 多源清洗逻辑塞进星途上传解析器。
 
@@ -136,10 +140,12 @@ curl http://127.0.0.1:8020/admin
 这一步会检查：
 
 - `/api/health` 是否正常。
-- `/` 和 `/admin` 是否返回生产 HTML。
+- `/` 和 `/admin` 是否返回生产 React HTML。
+- `/oae` 是否返回原 OAE 运营日报 BI HTML，并包含 `data-dashboard-mode="business"`。
 - 前端资源是否使用 `/assets/...` 路径。
 - 首页和维护页是否没有 `X-Frame-Options` 或限制性的 `frame-ancestors`，避免飞书 iframe 被浏览器拦截。
 - `/api/short-video/overview` 是否仍包含账号、演员和视频 Top/Bot 合同字段。
+- `/dashboard/daily/latest` 与 `/dashboard/daily/trends` 是否返回 OAE 原看板所需 JSON。
 
 再在验收环境做上传刷新检查：
 
@@ -155,7 +161,7 @@ curl http://127.0.0.1:8020/admin
 node scripts/verify_feishu_iframe_render.cjs https://<your-bi-domain>
 ```
 
-这一步会把首页和 `/admin` 分别放进一个模拟飞书网页应用的 iframe，确认 iframe 内能渲染 React root，并出现 `星途短视频经营 BI` 和 `上传或替换 Excel`。
+这一步会把首页、Hub、星途页、OAE 页和维护页分别放进一个模拟飞书网页应用的 iframe，确认 React 页面能渲染 `#root`，OAE 页能渲染 `body[data-dashboard-mode="business"]`，并出现 `星途短视频经营 BI`、`经营 BI Hub`、`运营日报 BI` 和 `上传或替换 Excel`。
 
 也可以使用一键验收脚本串行执行上述检查：
 

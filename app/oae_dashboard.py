@@ -272,9 +272,287 @@ def build_trends(source_dir: Path) -> list[dict[str, Any]]:
                 "mtd_douyin_laike_orders": metric_number(topline, "mtd_douyin_laike_orders") or 0,
                 "mtd_deals": metric_number(topline, "mtd_deals") or 0,
                 "mtd_spend": metric_number(topline, "mtd_spend") or 0,
+                "mtd_cpl": metric_number(topline, "mtd_cpl") or 0,
+                "mtd_cps": metric_number(topline, "mtd_cps") or 0,
             }
         )
     return trends[-31:]
+
+
+def load_oae_daily_dashboard_payload(report_date: str = "latest", source_dir: Path | None = None) -> dict[str, Any]:
+    resolved_source_dir = source_dir or resolve_oae_source_dir()
+    if resolved_source_dir is None:
+        raise FileNotFoundError("No OAE dashboard source directory found")
+
+    source_path = resolve_source_path(resolved_source_dir, report_date)
+    rows = read_dashboard_source(source_path)
+    resolved_report_date = rows[0].get("report_date", "") if rows else report_date_from_path(source_path)
+    available_dates = available_report_dates_from_sources(resolved_source_dir)
+    topline = metrics_for(rows, source_table="topline", scope_name="全量")
+    lead_quality = metrics_for(rows, source_table="lead_quality", scope_name="全量")
+    overview = {
+        "impressions": dashboard_metric_payload(topline, "impressions", "曝光"),
+        "mtd_unique_leads": dashboard_metric_payload(topline, "mtd_unique_leads", "唯一线索"),
+        "mtd_douyin_laike_orders": dashboard_metric_payload(topline, "mtd_douyin_laike_orders", "抖音-来客线索（手机号去重）"),
+        "mtd_deals": dashboard_metric_payload(topline, "mtd_deals", "实销"),
+        "mtd_spend": dashboard_metric_payload(topline, "mtd_spend", "费用"),
+        "mtd_cpl": dashboard_metric_payload(topline, "mtd_cpl", "CPL"),
+        "mtd_cps": dashboard_metric_payload(topline, "mtd_cps", "CPS"),
+        "pending_day": dashboard_metric_payload(topline, "pending_day", "待交车（当日）"),
+        "pending_cumulative": dashboard_metric_payload(topline, "pending_cumulative", "待交车（累计）"),
+        "raw_leads": dashboard_metric_payload(lead_quality, "raw_leads", "线索"),
+        "unique_rate": dashboard_metric_payload(lead_quality, "unique_rate", "唯一率"),
+        "unowned_leads": dashboard_metric_payload(lead_quality, "unowned_leads", "无主线索"),
+        "manual_overrides": dashboard_metric_payload(lead_quality, "manual_overrides", "人工归属"),
+    }
+    if not overview["raw_leads"]["actual"]:
+        overview["raw_leads"] = dashboard_metric_payload(lead_quality, "lead_quality_unique_leads", "线索")
+
+    return {
+        "report_date": resolved_report_date,
+        "available_report_dates": available_dates,
+        "source": {
+            "type": "feishu_dashboard_source_tsv",
+            "path": public_source_path(source_path),
+            "rows": len(rows),
+        },
+        "overview": overview,
+        "funnel": dashboard_funnel(overview),
+        "lead_anchors": dashboard_entities(rows, source_table="lead_anchor", name_key="anchor_name"),
+        "seed_account": dashboard_metric_payload(
+            metrics_for(rows, source_table="seed_account", scope_name="EXEED星途"),
+            "mtd_impressions",
+            "EXEED星途累计曝光",
+        ),
+        "seed_anchors": dashboard_entities(rows, source_table="seed_anchor", name_key="anchor_name"),
+        "interactions": {
+            "module_anchors": ["overview", "funnel", "lead-anchors", "seed-exposure", "daily-bi-trends"],
+            "lead_anchor_sort_keys": ["mtd_unique_leads", "mtd_douyin_laike_orders", "visits", "mtd_cpl"],
+            "seed_anchor_sort_keys": ["mtd_impressions", "mtd_impressions_attain_rate"],
+        },
+    }
+
+
+def load_oae_trends_payload(
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    source_dir: Path | None = None,
+) -> dict[str, Any]:
+    resolved_source_dir = source_dir or resolve_oae_source_dir()
+    if resolved_source_dir is None:
+        raise FileNotFoundError("No OAE dashboard source directory found")
+
+    rows = build_trends(resolved_source_dir)
+    if start_date:
+        rows = [row for row in rows if row["report_date"] >= start_date]
+    if end_date:
+        rows = [row for row in rows if row["report_date"] <= end_date]
+    if not rows:
+        raise FileNotFoundError("No OAE dashboard source found for trend range")
+
+    first_date = rows[0]["report_date"]
+    last_date = rows[-1]["report_date"]
+    trend_specs = [
+        ("impressions", "曝光", "人次", "impressions"),
+        ("leads", "唯一线索", "条", "mtd_unique_leads"),
+        ("douyin_laike_orders", "来客线索", "条", "mtd_douyin_laike_orders"),
+        ("deals", "实销", "台", "mtd_deals"),
+        ("spend", "费用", "元", "mtd_spend"),
+        ("cpl", "CPL", "元/条", "mtd_cpl"),
+        ("cps", "CPS", "元/台", "mtd_cps"),
+    ]
+    daily_trends = [
+        {
+            "key": key,
+            "label": label,
+            "unit": unit,
+            "points": [{"date": row["report_date"], "value": row.get(source_key, 0)} for row in rows],
+        }
+        for key, label, unit, source_key in trend_specs
+    ]
+    latest = rows[-1]
+    core_kpi_summary = [
+        {
+            "key": key,
+            "label": label,
+            "unit": unit,
+            "value": latest.get(source_key, 0),
+            "actual": latest.get(source_key, 0),
+        }
+        for key, label, unit, source_key in trend_specs
+    ]
+    return {
+        "contract_version": "oae-dashboard-source-adapter-v1",
+        "date_range": {
+            "start": first_date,
+            "end": last_date,
+            "start_date": first_date,
+            "end_date": last_date,
+            "days": len(rows),
+            "selected_range_days": len(rows),
+            "date_count": len(rows),
+            "available_dates": [row["report_date"] for row in rows],
+            "missing_dates": [],
+        },
+        "selected_range_days": len(rows),
+        "available_dates": [row["report_date"] for row in rows],
+        "missing_dates": [],
+        "source_type": "feishu_dashboard_source_tsv_history",
+        "source": {
+            "type": "feishu_dashboard_source_tsv_history",
+            "paths": [row["report_date"] for row in rows],
+            "rows": len(rows),
+            "date_range_label": f"{first_date} 至 {last_date}",
+        },
+        "core_kpi_summary": core_kpi_summary,
+        "daily_trends": daily_trends,
+        "previous_period_summary": [],
+        "previous_period_trends": [],
+        "monthly_comparison": monthly_comparison_rows(daily_trends),
+        "account_daily_trends": [],
+        "anchor_daily_trends": [],
+        "seed_exposure_daily_trends": {"accounts": [], "anchors": []},
+        "quality_note": "仅基于 feishu_dashboard_source_latest_*.tsv 历史文件派生。",
+    }
+
+
+def resolve_source_path(source_dir: Path, report_date: str) -> Path:
+    if report_date == "latest":
+        latest = latest_source_path(source_dir)
+        if latest is None:
+            raise FileNotFoundError("No OAE dashboard source TSV found")
+        return latest
+    source_path = source_dir / f"feishu_dashboard_source_latest_{report_date}.tsv"
+    if not source_path.exists():
+        raise FileNotFoundError(f"OAE dashboard source TSV not found for {report_date}")
+    return source_path
+
+
+def dashboard_metric_payload(
+    metrics: dict[str, dict[str, str]],
+    key: str,
+    default_label: str,
+) -> dict[str, Any]:
+    row = metrics.get(key, {})
+    return {
+        "key": key,
+        "label": row.get("metric_name") or default_label,
+        "actual": parse_number(row.get("actual", "")) or 0,
+        "target": parse_number(row.get("target", "")),
+        "attain_rate": parse_number(row.get("attain_rate", "")),
+        "unit": normalize_unit(row.get("unit", "")),
+        "note": row.get("source_column", ""),
+        "source_column": row.get("source_column", ""),
+    }
+
+
+def dashboard_entities(rows: list[dict[str, str]], *, source_table: str, name_key: str) -> list[dict[str, Any]]:
+    grouped = grouped_metrics(rows, source_table)
+    out = []
+    for name, metrics in grouped.items():
+        if source_table == "lead_account" and name in SUMMARY_ACCOUNT_NAMES:
+            continue
+        item = {
+            "name": name,
+            name_key: name,
+            "parent_scope": first_metric(metrics).get("parent_scope", ""),
+            "metrics": {
+                "daily_leads": dashboard_metric_payload(metrics, "daily_leads", "当日线索"),
+                "mtd_unique_leads": dashboard_metric_payload(metrics, "mtd_unique_leads", "累计唯一线索"),
+                "mtd_douyin_laike_orders": dashboard_metric_payload(metrics, "mtd_douyin_laike_orders", "抖音-来客线索（手机号去重）"),
+                "visits": dashboard_metric_payload(metrics, "visits", "到店数"),
+                "visit_rate": dashboard_metric_payload(metrics, "visit_rate", "到店率"),
+                "visit_deal_rate": dashboard_metric_payload(metrics, "visit_deal_rate", "到店成交率"),
+                "daily_deals": dashboard_metric_payload(metrics, "daily_deals", "当日实销"),
+                "mtd_deals": dashboard_metric_payload(metrics, "mtd_deals", "累计实销"),
+                "mtd_spend": dashboard_metric_payload(metrics, "mtd_spend", "费用"),
+                "mtd_cpl": dashboard_metric_payload(metrics, "mtd_cpl", "CPL"),
+                "mtd_cps": dashboard_metric_payload(metrics, "mtd_cps", "CPS"),
+                "daily_impressions": dashboard_metric_payload(metrics, "daily_impressions", "当日曝光"),
+                "mtd_impressions": dashboard_metric_payload(metrics, "mtd_impressions", "累计曝光"),
+            },
+        }
+        item["mtd_impressions_attain_rate"] = item["metrics"]["mtd_impressions"]["attain_rate"]
+        out.append(item)
+    return sorted(
+        out,
+        key=lambda item: (
+            -float(item["metrics"].get("mtd_unique_leads", {}).get("actual") or 0),
+            -float(item["metrics"].get("mtd_impressions", {}).get("actual") or 0),
+            item["name"],
+        ),
+    )
+
+
+def dashboard_funnel(overview: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    steps = [
+        ("impressions", "曝光"),
+        ("raw_leads", "原始线索"),
+        ("mtd_unique_leads", "唯一线索"),
+        ("mtd_douyin_laike_orders", "来客线索"),
+        ("mtd_deals", "实销"),
+    ]
+    out = []
+    previous: float | None = None
+    for key, label in steps:
+        metric = overview.get(key, {})
+        actual = float(metric.get("actual") or 0)
+        conversion = actual / previous if previous and previous > 0 else None
+        out.append(
+            {
+                "key": key,
+                "label": label,
+                "actual": actual,
+                "unit": metric.get("unit", ""),
+                "conversion_from_previous": conversion,
+            }
+        )
+        previous = actual
+    return out
+
+
+def monthly_comparison_rows(daily_trends: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    months = sorted(
+        {
+            point["date"][:7]
+            for trend in daily_trends
+            for point in trend.get("points", [])
+            if point.get("date")
+        }
+    )
+    rows = []
+    for month in months:
+        metrics = []
+        for trend in daily_trends:
+            values = [
+                point["value"]
+                for point in trend.get("points", [])
+                if point.get("date", "").startswith(month) and point.get("value") is not None
+            ]
+            metrics.append(
+                {
+                    "key": trend["key"],
+                    "label": trend["label"],
+                    "unit": trend["unit"],
+                    "value": values[-1] if values else None,
+                    "coverage_days": len(values),
+                }
+            )
+        rows.append({"month": month, "coverage_days": max((metric["coverage_days"] for metric in metrics), default=0), "metrics": metrics})
+    return rows
+
+
+def normalize_unit(unit: str) -> str:
+    return "人次" if unit == "次" else unit
+
+
+def public_source_path(path: Path) -> str:
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        return str(path.relative_to(repo_root))
+    except ValueError:
+        return str(path)
 
 
 def metrics_for(rows: list[dict[str, str]], *, source_table: str, scope_name: str) -> dict[str, dict[str, str]]:

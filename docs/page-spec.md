@@ -10,7 +10,7 @@
 - `/` 和 `/admin` 保持星途短视频 BI 向后兼容。
 - `/hub` 为 BI Hub 入口。
 - `/xingtu` 和 `/admin/xingtu` 为星途短视频模块入口。
-- `/oae` 为 OAE 经营 BI 入口，读取 OAE pipeline 产出的 `feishu_dashboard_source_latest_*.tsv`。
+- `/oae` 为 OAE 原“运营日报 BI”入口，读取 OAE pipeline 产出的 `feishu_dashboard_source_latest_*.tsv`，并保留 OAE 线程已验收的今日判断、经营链路、维度工作台、主播、种草、历史趋势和月度对比结构。
 - `/admin/oae` 为 OAE 数据源说明入口，不接收原始 Excel 上传。
 - 不做深色大屏。
 - 不做复杂权限模型。
@@ -18,7 +18,7 @@
 - 页面不展示 sheet、字段来源、缺失字段等技术性解释。
 - 超过五位数的数据按 `万` 展示，例如 `12,226,000` 显示为 `1222万`。
 - 曝光榜单包含单条视频的 Top1 和 Bot1，按视频曝光量计算，卡片优先展示视频标题。
-- OAE 不套用星途短视频指标、图表或上传解析器；OAE 数据只能来自 Operations Analytics Engine 的最终 dashboard source。
+- OAE 不套用星途短视频指标、图表或上传解析器；OAE 数据只能来自 Operations Analytics Engine 的最终 dashboard source，页面形态也不重画成星途/Hub 自绘模块。
 
 ## 数据验收目标
 

@@ -54,6 +54,44 @@ class ApiTest(unittest.TestCase):
         self.assertIn("oae_dashboard", payload)
         self.assertGreater(len(payload["oae_dashboard"]["lead_accounts"]), 0)
 
+    def test_oae_route_serves_original_operations_daily_bi_shell(self):
+        client = TestClient(app)
+
+        response = client.get("/oae")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("运营日报 BI", html)
+        self.assertIn("今日判断", html)
+        self.assertIn('data-dashboard-mode="business"', html)
+        self.assertIn("/dashboard/daily/latest", html)
+
+    def test_oae_original_dashboard_api_contract(self):
+        client = TestClient(app)
+
+        response = client.get("/dashboard/daily/latest")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["report_date"], "2026-06-08")
+        self.assertEqual(payload["source"]["type"], "feishu_dashboard_source_tsv")
+        self.assertIn("raw_leads", payload["overview"])
+        self.assertGreater(payload["overview"]["impressions"]["actual"], 0)
+        self.assertIn("lead_anchors", payload)
+        self.assertIn("seed_anchors", payload)
+
+    def test_oae_original_dashboard_trends_api_contract(self):
+        client = TestClient(app)
+
+        response = client.get("/dashboard/daily/trends?end_date=2026-06-08")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["date_range"]["end"], "2026-06-08")
+        self.assertTrue(payload["daily_trends"])
+        self.assertTrue(payload["core_kpi_summary"])
+        self.assertIn("monthly_comparison", payload)
+
     def test_oae_upload_is_blocked_until_source_contract_exists(self):
         client = TestClient(app)
         workbook = Workbook()

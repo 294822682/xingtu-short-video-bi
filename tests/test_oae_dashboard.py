@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from app.oae_dashboard import load_oae_dataset_from_sources
+from app.oae_dashboard import load_oae_daily_dashboard_payload, load_oae_trends_payload
 
 
 FIELDNAMES = [
@@ -97,6 +98,37 @@ class OaeDashboardTest(unittest.TestCase):
         self.assertEqual(dataset["oae_dashboard"]["available_report_dates"], ["2026-06-07", "2026-06-08"])
         self.assertEqual(dataset["oae_dashboard"]["lead_accounts"][0]["account_name"], "测试账号")
         self.assertEqual(dataset["oae_dashboard"]["trends"][-1]["mtd_deals"], 2.0)
+
+    def test_builds_original_oae_dashboard_payload_shape(self):
+        with TemporaryDirectory() as tmp:
+            source_dir = Path(tmp)
+            write_source(source_dir / "feishu_dashboard_source_latest_2026-06-08.tsv", "2026-06-08", 2000, 20, 2)
+
+            payload = load_oae_daily_dashboard_payload("latest", source_dir)
+
+        self.assertEqual(payload["report_date"], "2026-06-08")
+        self.assertEqual(payload["source"]["type"], "feishu_dashboard_source_tsv")
+        self.assertIn("raw_leads", payload["overview"])
+        self.assertEqual(payload["overview"]["impressions"]["actual"], 2000)
+        self.assertEqual(payload["funnel"][0]["label"], "曝光")
+        self.assertEqual(payload["lead_anchors"][0]["name"], "测试主播")
+        self.assertIn("metrics", payload["lead_anchors"][0])
+        self.assertEqual(payload["seed_account"]["key"], "mtd_impressions")
+        self.assertIn("daily-bi-trends", payload["interactions"]["module_anchors"])
+
+    def test_builds_original_oae_trends_payload_shape(self):
+        with TemporaryDirectory() as tmp:
+            source_dir = Path(tmp)
+            write_source(source_dir / "feishu_dashboard_source_latest_2026-06-07.tsv", "2026-06-07", 1000, 10, 1)
+            write_source(source_dir / "feishu_dashboard_source_latest_2026-06-08.tsv", "2026-06-08", 2000, 20, 2)
+
+            payload = load_oae_trends_payload(end_date="2026-06-08", source_dir=source_dir)
+
+        self.assertEqual(payload["date_range"]["end"], "2026-06-08")
+        self.assertEqual(payload["daily_trends"][0]["key"], "impressions")
+        self.assertEqual(payload["daily_trends"][0]["points"][-1]["value"], 2000)
+        self.assertEqual(payload["core_kpi_summary"][0]["key"], "impressions")
+        self.assertTrue(payload["monthly_comparison"])
 
     def test_returns_none_when_source_dir_has_no_dashboard_source(self):
         with TemporaryDirectory() as tmp:

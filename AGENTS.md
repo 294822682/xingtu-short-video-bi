@@ -8,6 +8,7 @@
 - 多人演员贡献曝光量不平摊。
 - 星途短视频刷新方式为手动上传/替换 Excel 后重新计算。
 - OAE 刷新方式为先在 Operations Analytics Engine 仓库完成多源清洗、归因、导出，再同步 `feishu_dashboard_source_latest_*.tsv`。
+- OAE `/oae` 必须保留 Operations Analytics Engine 原“运营日报 BI”看板结构，不得改成星途短视频 BI 或 Hub 自绘模块。
 - 飞书只是固定网页应用入口，首版不做复杂飞书 API 同步。
 - `/` 与 `/admin` 保持星途入口兼容；新增 BI 模块必须使用独立路由、独立数据文件和独立上传或只读数据源口径。
 
