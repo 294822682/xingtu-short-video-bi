@@ -105,7 +105,14 @@ def check_render_yaml(results: dict[str, object]) -> None:
 
 def check_dockerfile(results: dict[str, object]) -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    required = ["npm ci", "npm run build", "pip install --no-cache-dir -r requirements.txt", "uvicorn app.main:app"]
+    required = [
+        "npm ci",
+        "npm run build",
+        "npm install -g univer-cli@0.1.25",
+        "pip install --no-cache-dir -r requirements.txt",
+        "COPY --from=frontend /usr/local/bin/univer",
+        "uvicorn app.main:app",
+    ]
     missing = [item for item in required if item not in dockerfile]
     if missing:
         raise AssertionError(f"Dockerfile missing expected commands: {missing}")

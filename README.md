@@ -62,6 +62,8 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 当前线上服务是 Render Free Web Service，使用公开 GitHub 仓库拉取 Dockerfile 部署。该免费服务未挂载 persistent disk，上传刷新可用，但服务重启或重新部署后需要重新上传 Excel。
 
+Docker 镜像内安装 `univer-cli@0.1.25`，用于读取 WPS/Excel 的可见行数据。若上传解析不到有效视频行，接口会返回 422，不会把当前数据覆盖成 0。
+
 项目已包含：
 
 - `Dockerfile`

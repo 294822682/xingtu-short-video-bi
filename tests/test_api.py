@@ -46,6 +46,27 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(payload["status"], "ready")
         self.assertGreaterEqual(payload["overview"]["total_video_count"], 1)
 
+    def test_upload_endpoint_rejects_empty_dataset_without_overwriting_current_data(self):
+        client = TestClient(app)
+        before = client.get("/api/short-video/overview").json()["overview"]["total_video_count"]
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "抖音测试账号"
+        sheet.append(["视频名称", "发布时间", "播放量", "5s完播率", "视频演员"])
+
+        with NamedTemporaryFile(suffix=".xlsx") as tmp:
+            workbook.save(tmp.name)
+            tmp.seek(0)
+            response = client.post(
+                "/api/admin/upload",
+                files={"file": ("empty_short_video.xlsx", tmp, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("未识别到有效视频行", response.json()["detail"])
+        after = client.get("/api/short-video/overview").json()["overview"]["total_video_count"]
+        self.assertEqual(after, before)
+
 
 if __name__ == "__main__":
     unittest.main()

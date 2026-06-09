@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
+RUN npm install -g univer-cli@0.1.25
 
 COPY index.html vite.config.js ./
 COPY frontend ./frontend
@@ -19,6 +20,11 @@ WORKDIR /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend /usr/local/bin/univer /usr/local/bin/univer
+COPY --from=frontend /usr/local/lib/node_modules/univer-cli /usr/local/lib/node_modules/univer-cli
+RUN univer --help >/dev/null
 
 COPY app ./app
 COPY --from=frontend /app/dist ./dist

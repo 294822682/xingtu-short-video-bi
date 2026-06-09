@@ -49,6 +49,10 @@ async def upload(file: UploadFile = File(...)) -> dict:
     finally:
         tmp_path.unlink(missing_ok=True)
 
+    video_count = int(dataset.get("overview", {}).get("total_video_count") or 0)
+    if video_count == 0:
+        raise HTTPException(status_code=422, detail="未识别到有效视频行，请确认 Excel 已保存可见数据后再上传。")
+
     global CURRENT_DATASET
     CURRENT_DATASET = dataset
     save_dataset(dataset)
