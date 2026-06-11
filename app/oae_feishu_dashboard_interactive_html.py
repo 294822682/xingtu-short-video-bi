@@ -2065,6 +2065,7 @@ def _trend_js(api_path: str) -> str:
 const DATA_URL = "{_script_string(api_path)}";
 const CORE_KPI_KEYS = ["impressions", "leads", "douyin_laike_orders", "deals", "spend", "cpl", "cps"];
 let currentRangeMode = "custom";
+let latestAvailableDate = "";
 
 function escapeHtml(value) {{
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({{
@@ -2179,7 +2180,8 @@ function metricProgressRate(metric) {{
 }}
 
 function metricLine(metric) {{
-  const lines = [`<span>目标参考：${{escapeHtml(targetText(metric))}}</span>`];
+  const lines = [];
+  if (hasValue(metric?.target)) lines.push(`<span>目标参考：${{escapeHtml(targetText(metric))}}</span>`);
   if (isSpendMetric(metric)) {{
     return lines.join("");
   }}
@@ -2194,7 +2196,7 @@ function metricLine(metric) {{
 function progressBar(metric) {{
   const progressRate = metricProgressRate(metric);
   if (!hasValue(progressRate)) {{
-    return `<div class="progress-bar progress-muted" aria-label="目标参考未提供"><span class="progress-fill" style="width:0%"></span></div>`;
+    return "";
   }}
   const width = Math.max(0, Math.min(progressRate * 100, 100));
   const label = isCostMetric(metric) ? "成本比值" : "当前 / 目标";
@@ -2401,14 +2403,14 @@ function featuredTrendChart(label, points, unit = "") {{
 function kpiTooltip(metric) {{
   const label = metric?.label || metric?.key || "未提供";
   const unit = metric?.unit || "未提供";
-  const parts = [`字段：${{label}}`, `单位：${{unit || "未提供"}}`, `目标参考：${{targetText(metric)}}`];
+  const parts = [`指标：${{label}}`, `单位：${{unit || "未提供"}}`];
+  if (hasValue(metric?.target)) parts.push(`目标参考：${{targetText(metric)}}`);
   if (isSpendMetric(metric)) {{
-    parts.push("计算关系：当前范围内费用汇总");
+    parts.push("当前范围内费用汇总");
   }} else if (isCostMetric(metric)) {{
-    parts.push("计算关系：实际成本 / 目标参考");
+    parts.push("成本效率");
     if (hasValue(metricProgressRate(metric))) parts.push(`成本比值：${{rateText(metric)}}`);
   }} else {{
-    parts.push("计算关系：实际值 / 目标参考");
     if (hasValue(metricProgressRate(metric))) parts.push(`当前 / 目标：${{rateText(metric)}}`);
   }}
   return parts.join("；");
@@ -2420,9 +2422,7 @@ function trendCard(metric, tone) {{
     <article class="kpi-card" tabindex="0" data-kpi-key="${{escapeHtml(metric?.key || "")}}" aria-label="${{escapeHtml(metric?.label || metric?.key || "核心指标")}}">
       <div class="business-label">${{escapeHtml(metric?.label || metric?.key || "未提供")}}</div>
       <div class="business-value">${{escapeHtml(fmtMetricValue(metric?.actual, metric?.unit || ""))}}</div>
-      <div class="business-sub">
-        ${{metricLine(metric || {{}})}}
-      </div>
+      ${{metricLine(metric || {{}}) ? `<div class="business-sub">${{metricLine(metric || {{}})}}</div>` : ""}}
       ${{progressBar(metric || {{}})}}
       <div class="kpi-card-help" role="tooltip">${{escapeHtml(tooltip)}}</div>
     </article>`;
@@ -3843,6 +3843,7 @@ function setActiveShortcut(mode) {{
 
 function renderTrendDashboard(payload) {{
   const range = payload.date_range || {{}};
+  latestAvailableDate = range.latest_available_date || payload.latest_available_date || (range.all_available_dates || payload.all_available_dates || []).slice(-1)[0] || latestAvailableDate;
   updateDateInputs(range);
   const start = range.start_date || range.start || "未提供";
   const end = range.end_date || range.end || "未提供";
@@ -3925,7 +3926,10 @@ async function loadTrend(path = DATA_URL) {{
 }}
 
 function padDate(value) {{
-  return value.toISOString().slice(0, 10);
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${{year}}-${{month}}-${{day}}`;
 }}
 
 function shiftDays(base, days) {{
@@ -3967,7 +3971,8 @@ function bindDateFilter() {{
   }});
   document.querySelectorAll("[data-range-shortcut]").forEach((button) => {{
     button.addEventListener("click", () => {{
-      const endBase = endInput.value ? new Date(`${{endInput.value}}T00:00:00`) : new Date();
+      const shortcutEnd = latestAvailableDate || initialEnd || endInput.value || "";
+      const endBase = shortcutEnd ? new Date(`${{shortcutEnd}}T00:00:00`) : new Date();
       let start = new Date(endBase.getTime());
       let end = new Date(endBase.getTime());
       const mode = button.getAttribute("data-range-shortcut");

@@ -343,6 +343,9 @@ def load_oae_trends_payload(
     if resolved_source_dir is None:
         raise FileNotFoundError("No OAE dashboard source directory found")
 
+    snapshots = dashboard_source_snapshots(resolved_source_dir)
+    all_report_dates = [snapshot["report_date"] for snapshot in snapshots]
+    latest_available_date = all_report_dates[-1] if all_report_dates else ""
     rows = build_trends(resolved_source_dir)
     if start_date:
         rows = [row for row in rows if row["report_date"] >= start_date]
@@ -350,9 +353,16 @@ def load_oae_trends_payload(
         rows = [row for row in rows if row["report_date"] <= end_date]
     if not rows:
         raise FileNotFoundError("No OAE dashboard source found for trend range")
+    filtered_snapshots = [
+        snapshot
+        for snapshot in snapshots
+        if snapshot["report_date"] >= rows[0]["report_date"] and snapshot["report_date"] <= rows[-1]["report_date"]
+    ]
 
     first_date = rows[0]["report_date"]
     last_date = rows[-1]["report_date"]
+    latest_rows = filtered_snapshots[-1]["rows"] if filtered_snapshots else read_dashboard_source(resolve_source_path(resolved_source_dir, last_date))
+    latest_topline = metrics_for(latest_rows, source_table="topline", scope_name="全量")
     trend_specs = [
         ("impressions", "曝光", "人次", "impressions"),
         ("leads", "唯一线索", "条", "mtd_unique_leads"),
@@ -371,15 +381,8 @@ def load_oae_trends_payload(
         }
         for key, label, unit, source_key in trend_specs
     ]
-    latest = rows[-1]
     core_kpi_summary = [
-        {
-            "key": key,
-            "label": label,
-            "unit": unit,
-            "value": latest.get(source_key, 0),
-            "actual": latest.get(source_key, 0),
-        }
+        trend_metric_payload(latest_topline, source_key, key, label)
         for key, label, unit, source_key in trend_specs
     ]
     return {
@@ -393,10 +396,14 @@ def load_oae_trends_payload(
             "selected_range_days": len(rows),
             "date_count": len(rows),
             "available_dates": [row["report_date"] for row in rows],
+            "all_available_dates": all_report_dates,
+            "latest_available_date": latest_available_date,
             "missing_dates": [],
         },
         "selected_range_days": len(rows),
         "available_dates": [row["report_date"] for row in rows],
+        "all_available_dates": all_report_dates,
+        "latest_available_date": latest_available_date,
         "missing_dates": [],
         "source_type": "feishu_dashboard_source_tsv_history",
         "source": {
@@ -410,9 +417,9 @@ def load_oae_trends_payload(
         "previous_period_summary": [],
         "previous_period_trends": [],
         "monthly_comparison": monthly_comparison_rows(daily_trends),
-        "account_daily_trends": [],
-        "anchor_daily_trends": [],
-        "seed_exposure_daily_trends": {"accounts": [], "anchors": []},
+        "account_summary": trend_account_summary(latest_rows, filtered_snapshots),
+        "anchor_summary": trend_anchor_summary(latest_rows, filtered_snapshots),
+        "seed_exposure_summary": trend_seed_exposure_summary(latest_rows, filtered_snapshots),
         "quality_note": "仅基于 feishu_dashboard_source_latest_*.tsv 历史文件派生。",
     }
 
@@ -512,6 +519,180 @@ def dashboard_funnel(overview: dict[str, dict[str, Any]]) -> list[dict[str, Any]
     return out
 
 
+def dashboard_source_snapshots(source_dir: Path) -> list[dict[str, Any]]:
+    snapshots = []
+    for path in sorted(source_dir.glob(SOURCE_PATTERN), key=lambda item: report_date_from_path(item)):
+        report_date = report_date_from_path(path)
+        if not report_date:
+            continue
+        snapshots.append({"report_date": report_date, "rows": read_dashboard_source(path)})
+    return snapshots
+
+
+def business_metric_payload(metrics: dict[str, dict[str, str]], source_key: str, key: str, default_label: str) -> dict[str, Any]:
+    payload = dashboard_metric_payload(metrics, source_key, default_label)
+    payload["key"] = key
+    if payload.get("unit") == "次":
+        payload["unit"] = "人次"
+    if payload.get("target") == 0:
+        payload["target"] = None
+    return payload
+
+
+def trend_metric_payload(metrics: dict[str, dict[str, str]], source_key: str, key: str, default_label: str) -> dict[str, Any]:
+    payload = business_metric_payload(metrics, source_key, key, default_label)
+    payload["value"] = payload.get("actual")
+    return payload
+
+
+def trend_points(
+    snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> list[dict[str, Any]]:
+    points = []
+    for snapshot in snapshots:
+        metrics = metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        points.append({"date": snapshot["report_date"], "value": metric_number(metrics, metric_key)})
+    return points
+
+
+def lead_metrics_for_trend(
+    metrics: dict[str, dict[str, str]],
+) -> dict[str, dict[str, Any]]:
+    return {
+        "leads": business_metric_payload(metrics, "mtd_unique_leads", "leads", "累计唯一线索"),
+        "unique_leads": business_metric_payload(metrics, "mtd_unique_leads", "unique_leads", "累计唯一线索"),
+        "douyin_laike_orders": business_metric_payload(metrics, "mtd_douyin_laike_orders", "douyin_laike_orders", "来客线索"),
+        "deals": business_metric_payload(metrics, "mtd_deals", "deals", "累计实销"),
+        "spend": business_metric_payload(metrics, "mtd_spend", "spend", "费用"),
+        "cpl": business_metric_payload(metrics, "mtd_cpl", "cpl", "CPL"),
+        "cps": business_metric_payload(metrics, "mtd_cps", "cps", "CPS"),
+        "daily_leads": business_metric_payload(metrics, "daily_leads", "daily_leads", "当日线索"),
+        "daily_deals": business_metric_payload(metrics, "daily_deals", "daily_deals", "当日实销"),
+        "lead_deal_rate": {
+            "key": "lead_deal_rate",
+            "label": "线索成交率",
+            "actual": lead_deal_rate(metrics),
+            "target": None,
+            "attain_rate": None,
+            "unit": "比例",
+        },
+    }
+
+
+def lead_deal_rate(metrics: dict[str, dict[str, str]]) -> float | None:
+    leads = metric_number(metrics, "mtd_unique_leads")
+    deals = metric_number(metrics, "mtd_deals")
+    if not leads or leads <= 0 or deals is None:
+        return None
+    return deals / leads
+
+
+def trend_account_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped = grouped_metrics(latest_rows, "lead_account")
+    entities = []
+    for name, metrics in grouped.items():
+        entities.append(
+            {
+                "name": name,
+                "account_name": name,
+                "parent_scope": first_metric(metrics).get("parent_scope") or "账号汇总",
+                "sort_order": metric_number(metrics, "mtd_unique_leads", field="sort_order") or 0,
+                "metrics": lead_metrics_for_trend(metrics),
+                "daily_trends": {
+                    "leads": trend_points(snapshots, source_table="lead_account", scope_name=name, metric_key="mtd_unique_leads"),
+                    "deals": trend_points(snapshots, source_table="lead_account", scope_name=name, metric_key="mtd_deals"),
+                },
+            }
+        )
+    return sorted(
+        entities,
+        key=lambda item: (
+            item["name"] != "线索组汇总",
+            -(item["metrics"].get("leads", {}).get("actual") or 0),
+            item["sort_order"],
+        ),
+    )
+
+
+def trend_anchor_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped = grouped_metrics(latest_rows, "lead_anchor")
+    entities = []
+    for name, metrics in grouped.items():
+        entities.append(
+            {
+                "name": name,
+                "anchor_name": name,
+                "parent_scope": first_metric(metrics).get("parent_scope", ""),
+                "sort_order": metric_number(metrics, "mtd_unique_leads", field="sort_order") or 0,
+                "metrics": lead_metrics_for_trend(metrics),
+                "daily_trends": {
+                    "leads": trend_points(snapshots, source_table="lead_anchor", scope_name=name, metric_key="mtd_unique_leads"),
+                    "deals": trend_points(snapshots, source_table="lead_anchor", scope_name=name, metric_key="mtd_deals"),
+                },
+            }
+        )
+    return sorted(entities, key=lambda item: (-(item["metrics"].get("leads", {}).get("actual") or 0), item["sort_order"]))
+
+
+def seed_entity_payload(
+    *,
+    name: str,
+    metrics: dict[str, dict[str, str]],
+    snapshots: list[dict[str, Any]],
+    source_table: str,
+    entity_type: str,
+    display_type: str,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "type": entity_type,
+        "display_type": display_type,
+        "parent_scope": first_metric(metrics).get("parent_scope", ""),
+        "sort_order": metric_number(metrics, "mtd_impressions", field="sort_order") or 0,
+        "metrics": {
+            "impressions": business_metric_payload(metrics, "mtd_impressions", "impressions", "累计曝光"),
+            "daily_impressions": business_metric_payload(metrics, "daily_impressions", "daily_impressions", "当日曝光"),
+            "latest_impressions": business_metric_payload(metrics, "daily_impressions", "latest_impressions", "最新曝光"),
+        },
+        "daily_trends": {
+            "impressions": trend_points(snapshots, source_table=source_table, scope_name=name, metric_key="mtd_impressions"),
+        },
+    }
+
+
+def trend_seed_exposure_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    accounts = [
+        seed_entity_payload(
+            name=name,
+            metrics=metrics,
+            snapshots=snapshots,
+            source_table="seed_account",
+            entity_type="account",
+            display_type="账号总曝光",
+        )
+        for name, metrics in grouped_metrics(latest_rows, "seed_account").items()
+    ]
+    anchors = [
+        seed_entity_payload(
+            name=name,
+            metrics=metrics,
+            snapshots=snapshots,
+            source_table="seed_anchor",
+            entity_type="anchor",
+            display_type="主播曝光",
+        )
+        for name, metrics in grouped_metrics(latest_rows, "seed_anchor").items()
+    ]
+    return {
+        "accounts": sorted(accounts, key=lambda item: -(item["metrics"].get("impressions", {}).get("actual") or 0)),
+        "anchors": sorted(anchors, key=lambda item: -(item["metrics"].get("impressions", {}).get("actual") or 0)),
+    }
+
+
 def monthly_comparison_rows(daily_trends: list[dict[str, Any]]) -> list[dict[str, Any]]:
     months = sorted(
         {
@@ -523,23 +704,21 @@ def monthly_comparison_rows(daily_trends: list[dict[str, Any]]) -> list[dict[str
     )
     rows = []
     for month in months:
-        metrics = []
+        metrics = {}
         for trend in daily_trends:
             values = [
                 point["value"]
                 for point in trend.get("points", [])
                 if point.get("date", "").startswith(month) and point.get("value") is not None
             ]
-            metrics.append(
-                {
-                    "key": trend["key"],
-                    "label": trend["label"],
-                    "unit": trend["unit"],
-                    "value": values[-1] if values else None,
-                    "coverage_days": len(values),
-                }
-            )
-        rows.append({"month": month, "coverage_days": max((metric["coverage_days"] for metric in metrics), default=0), "metrics": metrics})
+            metrics[trend["key"]] = {
+                "key": trend["key"],
+                "label": trend["label"],
+                "unit": trend["unit"],
+                "value": values[-1] if values else None,
+                "coverage_days": len(values),
+            }
+        rows.append({"month": month, "label": month, "coverage_days": max((metric["coverage_days"] for metric in metrics.values()), default=0), "metrics": metrics})
     return rows
 
 

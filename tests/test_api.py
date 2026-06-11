@@ -91,6 +91,9 @@ class ApiTest(unittest.TestCase):
         self.assertTrue(payload["daily_trends"])
         self.assertTrue(payload["core_kpi_summary"])
         self.assertIn("monthly_comparison", payload)
+        self.assertTrue(payload["account_summary"])
+        self.assertTrue(payload["anchor_summary"])
+        self.assertTrue(payload["seed_exposure_summary"]["anchors"])
 
     def test_oae_upload_is_blocked_until_source_contract_exists(self):
         client = TestClient(app)

@@ -129,6 +129,14 @@ class OaeDashboardTest(unittest.TestCase):
         self.assertEqual(payload["daily_trends"][0]["points"][-1]["value"], 2000)
         self.assertEqual(payload["core_kpi_summary"][0]["key"], "impressions")
         self.assertTrue(payload["monthly_comparison"])
+        self.assertIn("impressions", payload["monthly_comparison"][0]["metrics"])
+        self.assertEqual(payload["monthly_comparison"][0]["metrics"]["impressions"]["label"], "曝光")
+        self.assertTrue(payload["account_summary"])
+        self.assertEqual(payload["account_summary"][0]["name"], "测试账号")
+        self.assertTrue(payload["anchor_summary"])
+        self.assertEqual(payload["anchor_summary"][0]["name"], "测试主播")
+        self.assertEqual(payload["seed_exposure_summary"]["accounts"][0]["name"], "EXEED星途")
+        self.assertEqual(payload["seed_exposure_summary"]["anchors"][0]["name"], "测试主播")
 
     def test_returns_none_when_source_dir_has_no_dashboard_source(self):
         with TemporaryDirectory() as tmp:
