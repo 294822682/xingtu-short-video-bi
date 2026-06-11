@@ -49,7 +49,7 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(payload["module"]["slug"], "oae")
         self.assertEqual(payload["overview"]["module_status"], "ready")
         self.assertEqual(payload["overview"]["source_contract"], "feishu_dashboard_source_tsv")
-        self.assertEqual(payload["overview"]["report_date"], "2026-06-08")
+        self.assertEqual(payload["overview"]["report_date"], "2026-06-09")
         self.assertGreater(payload["overview"]["total_exposure"], 0)
         self.assertIn("oae_dashboard", payload)
         self.assertGreater(len(payload["oae_dashboard"]["lead_accounts"]), 0)
@@ -73,7 +73,7 @@ class ApiTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["report_date"], "2026-06-08")
+        self.assertEqual(payload["report_date"], "2026-06-09")
         self.assertEqual(payload["source"]["type"], "feishu_dashboard_source_tsv")
         self.assertIn("raw_leads", payload["overview"])
         self.assertGreater(payload["overview"]["impressions"]["actual"], 0)

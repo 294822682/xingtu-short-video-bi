@@ -1,5 +1,6 @@
 import csv
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -137,6 +138,32 @@ class OaeDashboardTest(unittest.TestCase):
         self.assertEqual(payload["anchor_summary"][0]["name"], "测试主播")
         self.assertEqual(payload["seed_exposure_summary"]["accounts"][0]["name"], "EXEED星途")
         self.assertEqual(payload["seed_exposure_summary"]["anchors"][0]["name"], "测试主播")
+
+    def test_trends_payload_keeps_full_requested_quarter_window(self):
+        with TemporaryDirectory() as tmp:
+            source_dir = Path(tmp)
+            first = date(2026, 3, 1)
+            for index in range(35):
+                report_date = (first + timedelta(days=index)).isoformat()
+                write_source(
+                    source_dir / f"feishu_dashboard_source_latest_{report_date}.tsv",
+                    report_date,
+                    1000 + index,
+                    10 + index,
+                    1,
+                )
+
+            payload = load_oae_trends_payload(
+                start_date="2026-03-01",
+                end_date="2026-04-04",
+                source_dir=source_dir,
+            )
+
+        self.assertEqual(payload["date_range"]["start"], "2026-03-01")
+        self.assertEqual(payload["date_range"]["end"], "2026-04-04")
+        self.assertEqual(len(payload["daily_trends"][0]["points"]), 35)
+        self.assertEqual(payload["daily_trends"][0]["points"][0]["date"], "2026-03-01")
+        self.assertEqual(payload["daily_trends"][0]["points"][-1]["date"], "2026-04-04")
 
     def test_returns_none_when_source_dir_has_no_dashboard_source(self):
         with TemporaryDirectory() as tmp:

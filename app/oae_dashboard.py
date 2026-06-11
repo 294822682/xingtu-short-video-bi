@@ -276,7 +276,7 @@ def build_trends(source_dir: Path) -> list[dict[str, Any]]:
                 "mtd_cps": metric_number(topline, "mtd_cps") or 0,
             }
         )
-    return trends[-31:]
+    return trends
 
 
 def load_oae_daily_dashboard_payload(report_date: str = "latest", source_dir: Path | None = None) -> dict[str, Any]:
