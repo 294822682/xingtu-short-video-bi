@@ -4,6 +4,7 @@ import csv
 import os
 import re
 from collections import defaultdict
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,40 @@ from typing import Any
 SOURCE_PATTERN = "feishu_dashboard_source_latest_*.tsv"
 REPORT_DATE_RE = re.compile(r"^feishu_dashboard_source_latest_(\d{4}-\d{2}-\d{2})\.tsv$")
 SUMMARY_ACCOUNT_NAMES = {"线索组汇总"}
+DEPARTED_ANCHOR_NAMES = {"王馨", "曹嘉洋"}
+BUSINESS_LABEL_OVERRIDES = {
+    "mtd_unique_leads": "风车线索（去重）",
+    "mtd_douyin_laike_orders": "抖音来客订单（去重）",
+}
+BUSINESS_SUMMARY_METRIC_KEYS = {
+    "mtd_unique_leads",
+    "mtd_douyin_laike_orders",
+    "mtd_deals",
+    "mtd_spend",
+    "mtd_cpl",
+    "mtd_cps",
+}
+LEAD_ACCOUNT_CORE_METRIC_KEYS = {
+    "daily_leads",
+    "mtd_unique_leads",
+    "mtd_douyin_laike_orders",
+    "daily_deals",
+    "mtd_deals",
+    "mtd_spend",
+    "mtd_cpl",
+    "mtd_cps",
+}
+RANGE_CUMULATIVE_METRIC_KEYS = {
+    "mtd_unique_leads",
+    "mtd_douyin_laike_orders",
+    "mtd_deals",
+    "mtd_spend",
+    "visits",
+    "visit_deals",
+}
+RANGE_DAILY_METRIC_KEYS = {"daily_leads", "daily_deals"}
+SEED_CUMULATIVE_METRIC_KEYS = {"mtd_impressions"}
+SEED_DAILY_METRIC_KEYS = {"daily_impressions"}
 
 
 def load_oae_dataset_from_sources(source_dir: Path | None = None) -> dict[str, Any] | None:
@@ -51,10 +86,17 @@ def resolve_oae_source_dir() -> Path | None:
 
     candidates.append(Path(__file__).resolve().parents[1] / "data" / "oae" / "sql_reports")
 
-    for candidate in candidates:
-        if candidate.exists() and any(candidate.glob(SOURCE_PATTERN)):
-            return candidate
-    return None
+    available: list[tuple[str, int, Path]] = []
+    for index, candidate in enumerate(candidates):
+        if not candidate.exists():
+            continue
+        latest_path = latest_source_path(candidate)
+        if latest_path is None:
+            continue
+        available.append((report_date_from_path(latest_path), index, candidate))
+    if not available:
+        return None
+    return max(available, key=lambda item: (item[0], -item[1]))[2]
 
 
 def latest_source_path(source_dir: Path) -> Path | None:
@@ -87,7 +129,7 @@ def build_oae_dataset(
     available_report_dates: list[str],
     trend_rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    topline = metrics_for(rows, source_table="topline", scope_name="全量")
+    topline = business_summary_metrics(rows)
     seed_account = metrics_for(rows, source_table="seed_account", scope_name="EXEED星途")
     impressions = metric_number(topline, "impressions")
     leads = metric_number(topline, "mtd_unique_leads")
@@ -185,7 +227,11 @@ def entity_rows(rows: list[dict[str, str]], *, source_table: str, name_key: str)
     grouped = grouped_metrics(rows, source_table)
     entities = []
     for name, metrics in grouped.items():
+        if source_table in {"lead_anchor", "seed_anchor"} and name in DEPARTED_ANCHOR_NAMES:
+            continue
         if source_table == "lead_account" and name in SUMMARY_ACCOUNT_NAMES:
+            continue
+        if source_table == "lead_account" and not has_any_metric(metrics, LEAD_ACCOUNT_CORE_METRIC_KEYS):
             continue
         entities.append(
             {
@@ -209,6 +255,8 @@ def seed_anchor_rows(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     grouped = grouped_metrics(rows, "seed_anchor")
     anchors = []
     for name, metrics in grouped.items():
+        if name in DEPARTED_ANCHOR_NAMES:
+            continue
         anchors.append(
             {
                 "anchor_name": name,
@@ -263,7 +311,7 @@ def build_trends(source_dir: Path) -> list[dict[str, Any]]:
         if not report_date:
             continue
         rows = read_dashboard_source(path)
-        topline = metrics_for(rows, source_table="topline", scope_name="全量")
+        topline = business_summary_metrics(rows)
         trends.append(
             {
                 "report_date": report_date,
@@ -288,12 +336,12 @@ def load_oae_daily_dashboard_payload(report_date: str = "latest", source_dir: Pa
     rows = read_dashboard_source(source_path)
     resolved_report_date = rows[0].get("report_date", "") if rows else report_date_from_path(source_path)
     available_dates = available_report_dates_from_sources(resolved_source_dir)
-    topline = metrics_for(rows, source_table="topline", scope_name="全量")
+    topline = business_summary_metrics(rows)
     lead_quality = metrics_for(rows, source_table="lead_quality", scope_name="全量")
     overview = {
         "impressions": dashboard_metric_payload(topline, "impressions", "曝光"),
-        "mtd_unique_leads": dashboard_metric_payload(topline, "mtd_unique_leads", "唯一线索"),
-        "mtd_douyin_laike_orders": dashboard_metric_payload(topline, "mtd_douyin_laike_orders", "抖音-来客线索（手机号去重）"),
+        "mtd_unique_leads": dashboard_metric_payload(topline, "mtd_unique_leads", "风车线索（去重）"),
+        "mtd_douyin_laike_orders": dashboard_metric_payload(topline, "mtd_douyin_laike_orders", "抖音来客订单（去重）"),
         "mtd_deals": dashboard_metric_payload(topline, "mtd_deals", "实销"),
         "mtd_spend": dashboard_metric_payload(topline, "mtd_spend", "费用"),
         "mtd_cpl": dashboard_metric_payload(topline, "mtd_cpl", "CPL"),
@@ -318,6 +366,7 @@ def load_oae_daily_dashboard_payload(report_date: str = "latest", source_dir: Pa
         },
         "overview": overview,
         "funnel": dashboard_funnel(overview),
+        "account_summary": dashboard_entities(rows, source_table="lead_account", name_key="account_name", include_summary=True),
         "lead_anchors": dashboard_entities(rows, source_table="lead_anchor", name_key="anchor_name"),
         "seed_account": dashboard_metric_payload(
             metrics_for(rows, source_table="seed_account", scope_name="EXEED星途"),
@@ -346,27 +395,38 @@ def load_oae_trends_payload(
     snapshots = dashboard_source_snapshots(resolved_source_dir)
     all_report_dates = [snapshot["report_date"] for snapshot in snapshots]
     latest_available_date = all_report_dates[-1] if all_report_dates else ""
-    rows = build_trends(resolved_source_dir)
-    if start_date:
-        rows = [row for row in rows if row["report_date"] >= start_date]
-    if end_date:
-        rows = [row for row in rows if row["report_date"] <= end_date]
+    all_rows = build_trends(resolved_source_dir)
+    if not all_rows:
+        raise FileNotFoundError("No OAE dashboard source found for trend range")
+
+    resolved_end_date = end_date or latest_available_date
+    resolved_start_date = start_date or default_trend_start_for_end(resolved_end_date)
+    rows = [
+        row
+        for row in all_rows
+        if row["report_date"] >= resolved_start_date and row["report_date"] <= resolved_end_date
+    ]
     if not rows:
         raise FileNotFoundError("No OAE dashboard source found for trend range")
     filtered_snapshots = [
         snapshot
         for snapshot in snapshots
-        if snapshot["report_date"] >= rows[0]["report_date"] and snapshot["report_date"] <= rows[-1]["report_date"]
+        if snapshot["report_date"] >= resolved_start_date and snapshot["report_date"] <= resolved_end_date
     ]
 
     first_date = rows[0]["report_date"]
     last_date = rows[-1]["report_date"]
     latest_rows = filtered_snapshots[-1]["rows"] if filtered_snapshots else read_dashboard_source(resolve_source_path(resolved_source_dir, last_date))
-    latest_topline = metrics_for(latest_rows, source_table="topline", scope_name="全量")
+    latest_topline = business_summary_metrics(latest_rows)
+    available_dates = [row["report_date"] for row in rows]
+    calendar_dates = calendar_date_strings(resolved_start_date, resolved_end_date)
+    available_date_set = set(available_dates)
+    missing_dates = [date_key for date_key in calendar_dates if date_key not in available_date_set]
+    selected_days = len(calendar_dates)
     trend_specs = [
         ("impressions", "曝光", "人次", "impressions"),
-        ("leads", "唯一线索", "条", "mtd_unique_leads"),
-        ("douyin_laike_orders", "来客线索", "条", "mtd_douyin_laike_orders"),
+        ("leads", "风车线索（去重）", "条", "mtd_unique_leads"),
+        ("douyin_laike_orders", "抖音来客订单（去重）", "条", "mtd_douyin_laike_orders"),
         ("deals", "实销", "台", "mtd_deals"),
         ("spend", "费用", "元", "mtd_spend"),
         ("cpl", "CPL", "元/条", "mtd_cpl"),
@@ -388,27 +448,27 @@ def load_oae_trends_payload(
     return {
         "contract_version": "oae-dashboard-source-adapter-v1",
         "date_range": {
-            "start": first_date,
-            "end": last_date,
-            "start_date": first_date,
-            "end_date": last_date,
-            "days": len(rows),
-            "selected_range_days": len(rows),
+            "start": resolved_start_date,
+            "end": resolved_end_date,
+            "start_date": resolved_start_date,
+            "end_date": resolved_end_date,
+            "days": selected_days,
+            "selected_range_days": selected_days,
             "date_count": len(rows),
-            "available_dates": [row["report_date"] for row in rows],
+            "available_dates": available_dates,
             "all_available_dates": all_report_dates,
             "latest_available_date": latest_available_date,
-            "missing_dates": [],
+            "missing_dates": missing_dates,
         },
-        "selected_range_days": len(rows),
-        "available_dates": [row["report_date"] for row in rows],
+        "selected_range_days": selected_days,
+        "available_dates": available_dates,
         "all_available_dates": all_report_dates,
         "latest_available_date": latest_available_date,
-        "missing_dates": [],
+        "missing_dates": missing_dates,
         "source_type": "feishu_dashboard_source_tsv_history",
         "source": {
             "type": "feishu_dashboard_source_tsv_history",
-            "paths": [row["report_date"] for row in rows],
+            "paths": available_dates,
             "rows": len(rows),
             "date_range_label": f"{first_date} 至 {last_date}",
         },
@@ -417,9 +477,9 @@ def load_oae_trends_payload(
         "previous_period_summary": [],
         "previous_period_trends": [],
         "monthly_comparison": monthly_comparison_rows(daily_trends),
-        "account_summary": trend_account_summary(latest_rows, filtered_snapshots),
-        "anchor_summary": trend_anchor_summary(latest_rows, filtered_snapshots),
-        "seed_exposure_summary": trend_seed_exposure_summary(latest_rows, filtered_snapshots),
+        "account_summary": trend_account_summary(snapshots, filtered_snapshots),
+        "anchor_summary": trend_anchor_summary(snapshots, filtered_snapshots),
+        "seed_exposure_summary": trend_seed_exposure_summary(snapshots, filtered_snapshots),
         "quality_note": "仅基于 feishu_dashboard_source_latest_*.tsv 历史文件派生。",
     }
 
@@ -436,50 +496,91 @@ def resolve_source_path(source_dir: Path, report_date: str) -> Path:
     return source_path
 
 
+def default_trend_start_for_end(end_date: str) -> str:
+    end = date.fromisoformat(end_date)
+    month_index = end.year * 12 + end.month - 1 - 2
+    year = month_index // 12
+    month = month_index % 12 + 1
+    return date(year, month, 1).isoformat()
+
+
+def calendar_date_strings(start_date: str, end_date: str) -> list[str]:
+    start = date.fromisoformat(start_date)
+    end = date.fromisoformat(end_date)
+    out: list[str] = []
+    current = start
+    while current <= end:
+        out.append(current.isoformat())
+        current += timedelta(days=1)
+    return out
+
+
 def dashboard_metric_payload(
     metrics: dict[str, dict[str, str]],
     key: str,
     default_label: str,
+    *,
+    missing_as_zero: bool = False,
 ) -> dict[str, Any]:
     row = metrics.get(key, {})
+    actual = parse_number(row.get("actual", ""))
+    connected = key in metrics and actual is not None
+    if actual is None and missing_as_zero:
+        actual = 0
     return {
         "key": key,
-        "label": row.get("metric_name") or default_label,
-        "actual": parse_number(row.get("actual", "")) or 0,
+        "label": BUSINESS_LABEL_OVERRIDES.get(key) or row.get("metric_name") or default_label,
+        "actual": actual,
         "target": parse_number(row.get("target", "")),
         "attain_rate": parse_number(row.get("attain_rate", "")),
         "unit": normalize_unit(row.get("unit", "")),
         "note": row.get("source_column", ""),
         "source_column": row.get("source_column", ""),
+        "source_status": "available" if connected else "not_connected",
     }
 
 
-def dashboard_entities(rows: list[dict[str, str]], *, source_table: str, name_key: str) -> list[dict[str, Any]]:
+def dashboard_entities(
+    rows: list[dict[str, str]],
+    *,
+    source_table: str,
+    name_key: str,
+    include_summary: bool = False,
+) -> list[dict[str, Any]]:
     grouped = grouped_metrics(rows, source_table)
     out = []
     for name, metrics in grouped.items():
-        if source_table == "lead_account" and name in SUMMARY_ACCOUNT_NAMES:
+        if source_table in {"lead_anchor", "seed_anchor"} and name in DEPARTED_ANCHOR_NAMES:
             continue
+        if source_table == "lead_account" and name in SUMMARY_ACCOUNT_NAMES and not include_summary:
+            continue
+        if source_table == "lead_account" and not has_any_metric(metrics, LEAD_ACCOUNT_CORE_METRIC_KEYS):
+            continue
+        metrics_payload = {
+            "daily_leads": dashboard_metric_payload(metrics, "daily_leads", "当日线索"),
+            "mtd_unique_leads": dashboard_metric_payload(metrics, "mtd_unique_leads", "风车线索（去重）"),
+            "mtd_douyin_laike_orders": dashboard_metric_payload(metrics, "mtd_douyin_laike_orders", "抖音来客订单（去重）"),
+            "visits": dashboard_metric_payload(metrics, "visits", "到店数", missing_as_zero=False),
+            "visit_rate": dashboard_metric_payload(metrics, "visit_rate", "到店率", missing_as_zero=False),
+            "visit_deal_rate": dashboard_metric_payload(metrics, "visit_deal_rate", "到店成交率", missing_as_zero=False),
+            "daily_deals": dashboard_metric_payload(metrics, "daily_deals", "当日实销"),
+            "mtd_deals": dashboard_metric_payload(metrics, "mtd_deals", "累计实销"),
+            "mtd_spend": dashboard_metric_payload(metrics, "mtd_spend", "费用"),
+            "mtd_cpl": dashboard_metric_payload(metrics, "mtd_cpl", "CPL"),
+            "mtd_cps": dashboard_metric_payload(metrics, "mtd_cps", "CPS"),
+            "daily_impressions": dashboard_metric_payload(metrics, "daily_impressions", "当日曝光"),
+            "mtd_impressions": dashboard_metric_payload(metrics, "mtd_impressions", "累计曝光"),
+        }
+        mark_zero_denominator_visit_metrics(metrics_payload)
+        mark_invalid_visit_rate(metrics_payload)
+        mark_invalid_visit_deal_rate(metrics_payload)
         item = {
             "name": name,
             name_key: name,
             "parent_scope": first_metric(metrics).get("parent_scope", ""),
-            "metrics": {
-                "daily_leads": dashboard_metric_payload(metrics, "daily_leads", "当日线索"),
-                "mtd_unique_leads": dashboard_metric_payload(metrics, "mtd_unique_leads", "累计唯一线索"),
-                "mtd_douyin_laike_orders": dashboard_metric_payload(metrics, "mtd_douyin_laike_orders", "抖音-来客线索（手机号去重）"),
-                "visits": dashboard_metric_payload(metrics, "visits", "到店数"),
-                "visit_rate": dashboard_metric_payload(metrics, "visit_rate", "到店率"),
-                "visit_deal_rate": dashboard_metric_payload(metrics, "visit_deal_rate", "到店成交率"),
-                "daily_deals": dashboard_metric_payload(metrics, "daily_deals", "当日实销"),
-                "mtd_deals": dashboard_metric_payload(metrics, "mtd_deals", "累计实销"),
-                "mtd_spend": dashboard_metric_payload(metrics, "mtd_spend", "费用"),
-                "mtd_cpl": dashboard_metric_payload(metrics, "mtd_cpl", "CPL"),
-                "mtd_cps": dashboard_metric_payload(metrics, "mtd_cps", "CPS"),
-                "daily_impressions": dashboard_metric_payload(metrics, "daily_impressions", "当日曝光"),
-                "mtd_impressions": dashboard_metric_payload(metrics, "mtd_impressions", "累计曝光"),
-            },
+            "metrics": metrics_payload,
         }
+        item["metric_groups"] = dashboard_entity_metric_groups(item["metrics"])
         item["mtd_impressions_attain_rate"] = item["metrics"]["mtd_impressions"]["attain_rate"]
         out.append(item)
     return sorted(
@@ -492,12 +593,39 @@ def dashboard_entities(rows: list[dict[str, str]], *, source_table: str, name_ke
     )
 
 
+def dashboard_entity_metric_groups(metrics: dict[str, dict[str, Any]]) -> dict[str, dict[str, dict[str, Any]]]:
+    groups: dict[str, dict[str, dict[str, Any]]] = {
+        "线索": {
+            "daily_leads": metrics["daily_leads"],
+            "mtd_unique_leads": metrics["mtd_unique_leads"],
+            "mtd_douyin_laike_orders": metrics["mtd_douyin_laike_orders"],
+        },
+        "成交": {
+            "daily_deals": metrics["daily_deals"],
+            "mtd_deals": metrics["mtd_deals"],
+        },
+        "成本": {
+            "mtd_spend": metrics["mtd_spend"],
+            "mtd_cpl": metrics["mtd_cpl"],
+            "mtd_cps": metrics["mtd_cps"],
+        },
+    }
+    visit_metrics = {
+        key: metrics[key]
+        for key in ("visits", "visit_rate", "visit_deal_rate")
+        if metrics[key].get("source_status") in {"available", "not_applicable"}
+    }
+    if visit_metrics:
+        groups["到店"] = visit_metrics
+    return groups
+
+
 def dashboard_funnel(overview: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     steps = [
         ("impressions", "曝光"),
         ("raw_leads", "原始线索"),
-        ("mtd_unique_leads", "唯一线索"),
-        ("mtd_douyin_laike_orders", "来客线索"),
+        ("mtd_unique_leads", "风车线索（去重）"),
+        ("mtd_douyin_laike_orders", "抖音来客订单（去重）"),
         ("mtd_deals", "实销"),
     ]
     out = []
@@ -529,8 +657,15 @@ def dashboard_source_snapshots(source_dir: Path) -> list[dict[str, Any]]:
     return snapshots
 
 
-def business_metric_payload(metrics: dict[str, dict[str, str]], source_key: str, key: str, default_label: str) -> dict[str, Any]:
-    payload = dashboard_metric_payload(metrics, source_key, default_label)
+def business_metric_payload(
+    metrics: dict[str, dict[str, str]],
+    source_key: str,
+    key: str,
+    default_label: str,
+    *,
+    missing_as_zero: bool = False,
+) -> dict[str, Any]:
+    payload = dashboard_metric_payload(metrics, source_key, default_label, missing_as_zero=missing_as_zero)
     payload["key"] = key
     if payload.get("unit") == "次":
         payload["unit"] = "人次"
@@ -559,13 +694,315 @@ def trend_points(
     return points
 
 
+def entity_names_from_snapshots(snapshots: list[dict[str, Any]], source_table: str) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for snapshot in snapshots:
+        for name in grouped_metrics(snapshot["rows"], source_table).keys():
+            if name and name not in seen:
+                seen.add(name)
+                names.append(name)
+    return names
+
+
+def canonical_scope_name(source_table: str, scope_name: str) -> str:
+    name = str(scope_name or "").strip()
+    if source_table == "seed_account":
+        for prefix in ("抖音-", "快手-"):
+            if name.startswith(prefix):
+                return name[len(prefix) :]
+    return name
+
+
+def canonical_entity_names_from_snapshots(snapshots: list[dict[str, Any]], source_table: str) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for snapshot in snapshots:
+        for name in grouped_metrics(snapshot["rows"], source_table).keys():
+            canonical = canonical_scope_name(source_table, name)
+            if canonical and canonical not in seen:
+                seen.add(canonical)
+                names.append(canonical)
+    return names
+
+
+def canonical_metrics_for(
+    rows: list[dict[str, str]],
+    *,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, dict[str, str]]:
+    canonical_name = canonical_scope_name(source_table, scope_name)
+    for raw_name, metrics in grouped_metrics(rows, source_table).items():
+        if canonical_scope_name(source_table, raw_name) == canonical_name:
+            out = {key: dict(value) for key, value in metrics.items()}
+            for row in out.values():
+                row["scope_name"] = canonical_name
+            return out
+    return {}
+
+
+def latest_entity_metrics(
+    snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, dict[str, str]]:
+    for snapshot in reversed(snapshots):
+        metrics = metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        if metrics:
+            return metrics
+    return {}
+
+
+def latest_canonical_entity_metrics(
+    snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, dict[str, str]]:
+    for snapshot in reversed(snapshots):
+        metrics = canonical_metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        if metrics:
+            return metrics
+    return {}
+
+
+def previous_month_snapshot(
+    snapshots: list[dict[str, Any]],
+    *,
+    month: str,
+    before_date: str,
+) -> dict[str, Any] | None:
+    previous = [
+        snapshot
+        for snapshot in snapshots
+        if snapshot["report_date"].startswith(month) and snapshot["report_date"] < before_date
+    ]
+    return previous[-1] if previous else None
+
+
+def range_cumulative_value(
+    all_snapshots: list[dict[str, Any]],
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> float | None:
+    by_month: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for snapshot in filtered_snapshots:
+        by_month[snapshot["report_date"][:7]].append(snapshot)
+
+    total = 0.0
+    connected = False
+    for month, month_snapshots in sorted(by_month.items()):
+        first_snapshot = month_snapshots[0]
+        last_snapshot = month_snapshots[-1]
+        last_metrics = metrics_for(last_snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        last_value = metric_number(last_metrics, metric_key)
+        if last_value is None:
+            continue
+        baseline = previous_month_snapshot(
+            all_snapshots,
+            month=month,
+            before_date=first_snapshot["report_date"],
+        )
+        baseline_value = None
+        if baseline is not None:
+            baseline_metrics = metrics_for(baseline["rows"], source_table=source_table, scope_name=scope_name)
+            baseline_value = metric_number(baseline_metrics, metric_key)
+        total += last_value - baseline_value if baseline_value is not None else last_value
+        connected = True
+    return total if connected else None
+
+
+def range_daily_value(
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> float | None:
+    total = 0.0
+    connected = False
+    for snapshot in filtered_snapshots:
+        metrics = metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        value = metric_number(metrics, metric_key)
+        if value is None:
+            continue
+        total += value
+        connected = True
+    return total if connected else None
+
+
+def range_canonical_cumulative_value(
+    all_snapshots: list[dict[str, Any]],
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> float | None:
+    by_month: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for snapshot in filtered_snapshots:
+        by_month[snapshot["report_date"][:7]].append(snapshot)
+
+    total = 0.0
+    connected = False
+    for month, month_snapshots in sorted(by_month.items()):
+        first_snapshot = month_snapshots[0]
+        last_snapshot = month_snapshots[-1]
+        last_metrics = canonical_metrics_for(last_snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        last_value = metric_number(last_metrics, metric_key)
+        if last_value is None:
+            continue
+        baseline = previous_month_snapshot(
+            all_snapshots,
+            month=month,
+            before_date=first_snapshot["report_date"],
+        )
+        baseline_value = None
+        if baseline is not None:
+            baseline_metrics = canonical_metrics_for(baseline["rows"], source_table=source_table, scope_name=scope_name)
+            baseline_value = metric_number(baseline_metrics, metric_key)
+        total += last_value - baseline_value if baseline_value is not None else last_value
+        connected = True
+    return total if connected else None
+
+
+def range_canonical_daily_value(
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> float | None:
+    total = 0.0
+    connected = False
+    for snapshot in filtered_snapshots:
+        metrics = canonical_metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        value = metric_number(metrics, metric_key)
+        if value is None:
+            continue
+        total += value
+        connected = True
+    return total if connected else None
+
+
+def range_metric_row(
+    latest_metrics: dict[str, dict[str, str]],
+    metric_key: str,
+    actual: float | None,
+    *,
+    label: str,
+    unit: str,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, str]:
+    template = dict(latest_metrics.get(metric_key, {}))
+    template["metric_key"] = metric_key
+    template["metric_name"] = BUSINESS_LABEL_OVERRIDES.get(metric_key) or template.get("metric_name") or label
+    template["actual"] = "" if actual is None else str(actual)
+    template["target"] = ""
+    template["attain_rate"] = ""
+    template["unit"] = template.get("unit") or unit
+    template["source_column"] = f"range_aggregate.{source_table}.{scope_name}.{metric_key}"
+    return template
+
+
+def range_lead_metrics(
+    all_snapshots: list[dict[str, Any]],
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, dict[str, str]]:
+    latest_metrics = latest_entity_metrics(filtered_snapshots, source_table=source_table, scope_name=scope_name)
+    rows: dict[str, dict[str, str]] = {}
+    metric_defaults = {
+        "daily_leads": ("当日线索", "条"),
+        "mtd_unique_leads": ("风车线索（去重）", "条"),
+        "mtd_douyin_laike_orders": ("抖音来客订单（去重）", "条"),
+        "visits": ("到店数", "条"),
+        "visit_deals": ("到店成交数", "台"),
+        "visit_rate": ("到店率", "比例"),
+        "visit_deal_rate": ("到店成交率", "比例"),
+        "daily_deals": ("当日实销", "台"),
+        "mtd_deals": ("累计实销", "台"),
+        "mtd_spend": ("费用", "元"),
+        "mtd_cpl": ("CPL", "元/条"),
+        "mtd_cps": ("CPS", "元/台"),
+    }
+    for metric_key in RANGE_CUMULATIVE_METRIC_KEYS:
+        label, unit = metric_defaults[metric_key]
+        rows[metric_key] = range_metric_row(
+            latest_metrics,
+            metric_key,
+            range_cumulative_value(
+                all_snapshots,
+                filtered_snapshots,
+                source_table=source_table,
+                scope_name=scope_name,
+                metric_key=metric_key,
+            ),
+            label=label,
+            unit=unit,
+            source_table=source_table,
+            scope_name=scope_name,
+        )
+    for metric_key in RANGE_DAILY_METRIC_KEYS:
+        label, unit = metric_defaults[metric_key]
+        rows[metric_key] = range_metric_row(
+            latest_metrics,
+            metric_key,
+            range_daily_value(
+                filtered_snapshots,
+                source_table=source_table,
+                scope_name=scope_name,
+                metric_key=metric_key,
+            ),
+            label=label,
+            unit=unit,
+            source_table=source_table,
+            scope_name=scope_name,
+        )
+
+    leads = metric_number(rows, "mtd_unique_leads")
+    deals = metric_number(rows, "mtd_deals")
+    spend = metric_number(rows, "mtd_spend")
+    visits = metric_number(rows, "visits")
+    visit_deals = metric_number(rows, "visit_deals")
+    derived_values = {
+        "mtd_cpl": spend / leads if spend is not None and leads and leads > 0 else None,
+        "mtd_cps": spend / deals if spend is not None and deals and deals > 0 else None,
+        "visit_rate": visits / leads if visits is not None and leads and leads > 0 else None,
+        "visit_deal_rate": visit_deals / visits if visit_deals is not None and visits and visits > 0 else None,
+    }
+    for metric_key, actual in derived_values.items():
+        label, unit = metric_defaults[metric_key]
+        rows[metric_key] = range_metric_row(
+            latest_metrics,
+            metric_key,
+            actual,
+            label=label,
+            unit=unit,
+            source_table=source_table,
+            scope_name=scope_name,
+        )
+    return rows
+
+
 def lead_metrics_for_trend(
     metrics: dict[str, dict[str, str]],
 ) -> dict[str, dict[str, Any]]:
-    return {
-        "leads": business_metric_payload(metrics, "mtd_unique_leads", "leads", "累计唯一线索"),
-        "unique_leads": business_metric_payload(metrics, "mtd_unique_leads", "unique_leads", "累计唯一线索"),
-        "douyin_laike_orders": business_metric_payload(metrics, "mtd_douyin_laike_orders", "douyin_laike_orders", "来客线索"),
+    out = {
+        "leads": business_metric_payload(metrics, "mtd_unique_leads", "leads", "风车线索（去重）"),
+        "unique_leads": business_metric_payload(metrics, "mtd_unique_leads", "unique_leads", "风车线索（去重）"),
+        "douyin_laike_orders": business_metric_payload(metrics, "mtd_douyin_laike_orders", "douyin_laike_orders", "抖音来客订单（去重）"),
+        "visits": business_metric_payload(metrics, "visits", "visits", "到店数", missing_as_zero=False),
+        "visit_rate": business_metric_payload(metrics, "visit_rate", "visit_rate", "到店率", missing_as_zero=False),
+        "visit_deal_rate": business_metric_payload(metrics, "visit_deal_rate", "visit_deal_rate", "到店成交率", missing_as_zero=False),
         "deals": business_metric_payload(metrics, "mtd_deals", "deals", "累计实销"),
         "spend": business_metric_payload(metrics, "mtd_spend", "spend", "费用"),
         "cpl": business_metric_payload(metrics, "mtd_cpl", "cpl", "CPL"),
@@ -581,6 +1018,100 @@ def lead_metrics_for_trend(
             "unit": "比例",
         },
     }
+    mark_zero_denominator_visit_metrics(out)
+    mark_invalid_visit_rate(out)
+    mark_invalid_visit_deal_rate(out)
+    return out
+
+
+def range_seed_metrics(
+    all_snapshots: list[dict[str, Any]],
+    filtered_snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+) -> dict[str, dict[str, str]]:
+    latest_metrics = latest_canonical_entity_metrics(filtered_snapshots, source_table=source_table, scope_name=scope_name)
+    rows: dict[str, dict[str, str]] = {}
+    metric_defaults = {
+        "daily_impressions": ("当日曝光", "人次"),
+        "mtd_impressions": ("累计曝光", "人次"),
+    }
+    for metric_key in SEED_CUMULATIVE_METRIC_KEYS:
+        label, unit = metric_defaults[metric_key]
+        rows[metric_key] = range_metric_row(
+            latest_metrics,
+            metric_key,
+            range_canonical_cumulative_value(
+                all_snapshots,
+                filtered_snapshots,
+                source_table=source_table,
+                scope_name=scope_name,
+                metric_key=metric_key,
+            ),
+            label=label,
+            unit=unit,
+            source_table=source_table,
+            scope_name=scope_name,
+        )
+    for metric_key in SEED_DAILY_METRIC_KEYS:
+        label, unit = metric_defaults[metric_key]
+        rows[metric_key] = range_metric_row(
+            latest_metrics,
+            metric_key,
+            range_canonical_daily_value(
+                filtered_snapshots,
+                source_table=source_table,
+                scope_name=scope_name,
+                metric_key=metric_key,
+            ),
+            label=label,
+            unit=unit,
+            source_table=source_table,
+            scope_name=scope_name,
+        )
+    return rows
+
+
+def mark_zero_denominator_visit_metrics(metrics: dict[str, dict[str, Any]]) -> None:
+    visits = metrics.get("visits", {})
+    visit_deal_rate = metrics.get("visit_deal_rate", {})
+    visits_actual = visits.get("actual")
+    if (
+        visits.get("source_status") == "available"
+        and visits_actual is not None
+        and float(visits_actual) == 0
+        and visit_deal_rate.get("actual") is None
+    ):
+        visit_deal_rate["source_status"] = "not_applicable"
+        visit_deal_rate["note"] = "到店数为 0，无法计算到店成交率"
+        visit_deal_rate["source_column"] = visit_deal_rate.get("source_column") or "derived.zero_visit_denominator"
+
+
+def mark_invalid_visit_deal_rate(metrics: dict[str, dict[str, Any]]) -> None:
+    visit_deal_rate = metrics.get("visit_deal_rate", {})
+    actual = visit_deal_rate.get("actual")
+    if actual is None:
+        return
+    if float(actual) <= 1:
+        return
+    visit_deal_rate["actual"] = None
+    visit_deal_rate["source_status"] = "not_applicable"
+    visit_deal_rate["note"] = "到店成交数大于到店数，无法计算到店成交率"
+    visit_deal_rate["source_column"] = visit_deal_rate.get("source_column") or "derived.invalid_visit_deal_rate"
+
+
+def mark_invalid_visit_rate(metrics: dict[str, dict[str, Any]]) -> None:
+    visit_rate = metrics.get("visit_rate", {})
+    actual = visit_rate.get("actual")
+    if actual is None:
+        return
+    if float(actual) <= 1:
+        return
+    visit_rate["actual"] = None
+    visit_rate["source_status"] = "not_applicable"
+    visit_rate["note"] = "到店数大于风车线索数，无法计算到店率"
+    visit_rate["source_column"] = visit_rate.get("source_column") or "derived.invalid_visit_rate"
 
 
 def lead_deal_rate(metrics: dict[str, dict[str, str]]) -> float | None:
@@ -591,16 +1122,19 @@ def lead_deal_rate(metrics: dict[str, dict[str, str]]) -> float | None:
     return deals / leads
 
 
-def trend_account_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped = grouped_metrics(latest_rows, "lead_account")
+def trend_account_summary(all_snapshots: list[dict[str, Any]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     entities = []
-    for name, metrics in grouped.items():
+    for name in entity_names_from_snapshots(snapshots, "lead_account"):
+        metrics = range_lead_metrics(all_snapshots, snapshots, source_table="lead_account", scope_name=name)
+        if name not in SUMMARY_ACCOUNT_NAMES and not has_any_metric(metrics, LEAD_ACCOUNT_CORE_METRIC_KEYS):
+            continue
+        latest_metrics = latest_entity_metrics(snapshots, source_table="lead_account", scope_name=name)
         entities.append(
             {
                 "name": name,
                 "account_name": name,
-                "parent_scope": first_metric(metrics).get("parent_scope") or "账号汇总",
-                "sort_order": metric_number(metrics, "mtd_unique_leads", field="sort_order") or 0,
+                "parent_scope": first_metric(latest_metrics).get("parent_scope") or "账号汇总",
+                "sort_order": metric_number(latest_metrics, "mtd_unique_leads", field="sort_order") or 0,
                 "metrics": lead_metrics_for_trend(metrics),
                 "daily_trends": {
                     "leads": trend_points(snapshots, source_table="lead_account", scope_name=name, metric_key="mtd_unique_leads"),
@@ -618,16 +1152,21 @@ def trend_account_summary(latest_rows: list[dict[str, str]], snapshots: list[dic
     )
 
 
-def trend_anchor_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped = grouped_metrics(latest_rows, "lead_anchor")
+def trend_anchor_summary(all_snapshots: list[dict[str, Any]], snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     entities = []
-    for name, metrics in grouped.items():
+    for name in entity_names_from_snapshots(snapshots, "lead_anchor"):
+        if name in DEPARTED_ANCHOR_NAMES:
+            continue
+        metrics = range_lead_metrics(all_snapshots, snapshots, source_table="lead_anchor", scope_name=name)
+        if not has_any_metric(metrics, LEAD_ACCOUNT_CORE_METRIC_KEYS):
+            continue
+        latest_metrics = latest_entity_metrics(snapshots, source_table="lead_anchor", scope_name=name)
         entities.append(
             {
                 "name": name,
                 "anchor_name": name,
-                "parent_scope": first_metric(metrics).get("parent_scope", ""),
-                "sort_order": metric_number(metrics, "mtd_unique_leads", field="sort_order") or 0,
+                "parent_scope": first_metric(latest_metrics).get("parent_scope", ""),
+                "sort_order": metric_number(latest_metrics, "mtd_unique_leads", field="sort_order") or 0,
                 "metrics": lead_metrics_for_trend(metrics),
                 "daily_trends": {
                     "leads": trend_points(snapshots, source_table="lead_anchor", scope_name=name, metric_key="mtd_unique_leads"),
@@ -659,33 +1198,48 @@ def seed_entity_payload(
             "latest_impressions": business_metric_payload(metrics, "daily_impressions", "latest_impressions", "最新曝光"),
         },
         "daily_trends": {
-            "impressions": trend_points(snapshots, source_table=source_table, scope_name=name, metric_key="mtd_impressions"),
+            "impressions": canonical_trend_points(snapshots, source_table=source_table, scope_name=name, metric_key="mtd_impressions"),
         },
     }
 
 
-def trend_seed_exposure_summary(latest_rows: list[dict[str, str]], snapshots: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+def canonical_trend_points(
+    snapshots: list[dict[str, Any]],
+    *,
+    source_table: str,
+    scope_name: str,
+    metric_key: str,
+) -> list[dict[str, Any]]:
+    points = []
+    for snapshot in snapshots:
+        metrics = canonical_metrics_for(snapshot["rows"], source_table=source_table, scope_name=scope_name)
+        points.append({"date": snapshot["report_date"], "value": metric_number(metrics, metric_key)})
+    return points
+
+
+def trend_seed_exposure_summary(all_snapshots: list[dict[str, Any]], snapshots: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     accounts = [
         seed_entity_payload(
             name=name,
-            metrics=metrics,
+            metrics=range_seed_metrics(all_snapshots, snapshots, source_table="seed_account", scope_name=name),
             snapshots=snapshots,
             source_table="seed_account",
             entity_type="account",
             display_type="账号总曝光",
         )
-        for name, metrics in grouped_metrics(latest_rows, "seed_account").items()
+        for name in canonical_entity_names_from_snapshots(snapshots, "seed_account")
     ]
     anchors = [
         seed_entity_payload(
             name=name,
-            metrics=metrics,
+            metrics=range_seed_metrics(all_snapshots, snapshots, source_table="seed_anchor", scope_name=name),
             snapshots=snapshots,
             source_table="seed_anchor",
             entity_type="anchor",
             display_type="主播曝光",
         )
-        for name, metrics in grouped_metrics(latest_rows, "seed_anchor").items()
+        for name in canonical_entity_names_from_snapshots(snapshots, "seed_anchor")
+        if name not in DEPARTED_ANCHOR_NAMES
     ]
     return {
         "accounts": sorted(accounts, key=lambda item: -(item["metrics"].get("impressions", {}).get("actual") or 0)),
@@ -742,6 +1296,15 @@ def metrics_for(rows: list[dict[str, str]], *, source_table: str, scope_name: st
     }
 
 
+def business_summary_metrics(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    metrics = dict(metrics_for(rows, source_table="topline", scope_name="全量"))
+    summary = metrics_for(rows, source_table="lead_account", scope_name="线索组汇总")
+    for key in BUSINESS_SUMMARY_METRIC_KEYS:
+        if key in summary:
+            metrics[key] = summary[key]
+    return metrics
+
+
 def grouped_metrics(rows: list[dict[str, str]], source_table: str) -> dict[str, dict[str, dict[str, str]]]:
     grouped: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
     for row in rows:
@@ -768,6 +1331,10 @@ def metric_payload(row: dict[str, str]) -> dict[str, Any]:
 
 def metric_number(metrics: dict[str, dict[str, str]], key: str, *, field: str = "actual") -> float | None:
     return parse_number(metrics.get(key, {}).get(field, ""))
+
+
+def has_any_metric(metrics: dict[str, dict[str, str]], keys: set[str]) -> bool:
+    return any(key in metrics and parse_number(metrics.get(key, {}).get("actual", "")) is not None for key in keys)
 
 
 def parse_number(value: str | int | float | None) -> float | None:

@@ -182,7 +182,7 @@ def render_interactive_dashboard_html(source: DashboardSource, *, source_label: 
           <p class="kicker">02 · FUNNEL</p>
           <h2>全链路转化</h2>
         </div>
-        <p class="section-note">曝光、原始线索、唯一线索、来客线索、实销按同一源表展示；条形宽度使用对数比例，仅用于视觉阅读。</p>
+        <p class="section-note">曝光、原始线索、风车线索（去重）、抖音来客订单（去重）、实销按同一源表展示；条形宽度使用对数比例，仅用于视觉阅读。</p>
       </div>
       {funnel}
     </section>
@@ -190,11 +190,11 @@ def render_interactive_dashboard_html(source: DashboardSource, *, source_label: 
       <div class="section-head">
         <div>
           <p class="kicker">04 · LIVE ANCHORS</p>
-          <h2>线索组主播唯一线索与来客线索 KPI</h2>
+          <h2>线索组主播风车线索与抖音来客订单 KPI</h2>
         </div>
         <div class="sort-controls" aria-label="线索主播排序">
-          <button type="button" data-sort-table="lead-anchor-table" data-sort-key="mtd_unique_leads_actual" data-sort-dir="desc">按唯一线索排序</button>
-          <button type="button" data-sort-table="lead-anchor-table" data-sort-key="mtd_douyin_laike_orders_actual" data-sort-dir="desc">按来客线索排序</button>
+          <button type="button" data-sort-table="lead-anchor-table" data-sort-key="mtd_unique_leads_actual" data-sort-dir="desc">按风车线索排序</button>
+          <button type="button" data-sort-table="lead-anchor-table" data-sort-key="mtd_douyin_laike_orders_actual" data-sort-dir="desc">按抖音来客订单排序</button>
           <button type="button" data-sort-table="lead-anchor-table" data-sort-key="mtd_cpl_actual" data-sort-dir="asc">按 CPL 排序</button>
         </div>
       </div>
@@ -263,7 +263,7 @@ def render_api_connected_dashboard_html(
     <div>
       <div class="eyebrow">经营链路 + 维度工作台</div>
       <h1>{_escape(title)}</h1>
-      <p class="subtitle">以曝光、唯一线索、来客线索、实销、费用、CPL、CPS 串起经营链路，并保留主播、账号渠道、种草曝光、历史趋势和月度对比。</p>
+      <p class="subtitle">以曝光、风车线索（去重）、抖音来客订单（去重）、实销、费用、CPL、CPS 串起经营链路，并保留主播、账号渠道、种草曝光、历史趋势和月度对比。</p>
       <div class="dashboard-meta business-meta" aria-label="日报看板信息">
         <div>
           <span>报表日期</span>
@@ -346,7 +346,7 @@ def render_api_connected_dashboard_html(
         """
     )
     overview_note = "总览保留核心指标卡，便于和经营链路交叉核对。" if business_view else "指标卡从 API payload 渲染；悬停查看字段来源和说明。"
-    funnel_note = "从曝光到线索、订单、实销和成本效率的主要经营链路。" if business_view else "曝光、原始线索、唯一线索、来客线索、实销按后端只读 JSON 展示。"
+    funnel_note = "从曝光到线索、订单、实销和成本效率的主要经营链路。" if business_view else "曝光、原始线索、风车线索（去重）、抖音来客订单（去重）、实销按后端只读 JSON 展示。"
     decision_section = (
         """
     <section id="decision" class="section decision-section business-home band-plain" data-module="decision">
@@ -502,7 +502,7 @@ def render_api_connected_dashboard_html(
       <div class="section-head">
         <div>
           <p class="kicker">{_escape(lead_kicker)}</p>
-          <h2>线索组主播唯一线索与来客线索 KPI</h2>
+          <h2>线索组主播风车线索与抖音来客订单 KPI</h2>
         </div>
         <div class="table-actions">
           <label class="table-search" for="lead-anchor-search">
@@ -683,7 +683,7 @@ def render_trend_dashboard_html(*, api_path: str = "/dashboard/daily/trends") ->
           <span>排序</span>
           <select id="account-sort-select" class="account-sort-select">
             <option value="default">默认排序</option>
-            <option value="leads">线索数</option>
+            <option value="leads">风车线索（去重）</option>
             <option value="deals">成交数</option>
             <option value="spend">费用</option>
             <option value="cpl">CPL</option>
@@ -713,7 +713,7 @@ def render_trend_dashboard_html(*, api_path: str = "/dashboard/daily/trends") ->
           <p class="kicker">主播贡献</p>
           <h2>主播表现</h2>
         </div>
-        <p class="section-note">查看主播线索、成交、成本和趋势明细。</p>
+        <p class="section-note">查看主播风车线索、成交、成本和趋势明细。</p>
       </div>
       <div id="anchor-toolbar" class="anchor-toolbar" aria-label="主播表现筛选工具栏">
         <label class="anchor-search-control">
@@ -724,7 +724,7 @@ def render_trend_dashboard_html(*, api_path: str = "/dashboard/daily/trends") ->
           <span>排序</span>
           <select id="anchor-sort-select" class="anchor-sort-select">
             <option value="default">默认排序</option>
-            <option value="leads">线索数</option>
+            <option value="leads">风车线索（去重）</option>
             <option value="deals">成交数</option>
             <option value="spend">费用</option>
             <option value="cpl">CPL</option>
@@ -766,7 +766,7 @@ def render_trend_dashboard_html(*, api_path: str = "/dashboard/daily/trends") ->
             <option value="impressions">曝光</option>
             <option value="target">目标参考</option>
             <option value="target_rate">当前 / 目标</option>
-            <option value="latest">最新曝光</option>
+            <option value="latest">范围日曝光合计</option>
             <option value="name">名称</option>
           </select>
         </label>
@@ -872,8 +872,8 @@ def main(argv: list[str] | None = None) -> int:
 def _overview_cards(topline: dict[str, Metric]) -> str:
     cards = [
         ("曝光", _fmt_wan(topline["impressions"].actual), topline["impressions"], "teal"),
-        ("唯一线索", _fmt_int(topline["unique"].actual), topline["unique"], "green"),
-        ("来客线索", _fmt_int(topline["orders"].actual), topline["orders"], "amber"),
+        ("风车线索（去重）", _fmt_int(topline["unique"].actual), topline["unique"], "green"),
+        ("抖音来客订单（去重）", _fmt_int(topline["orders"].actual), topline["orders"], "amber"),
         ("实销", _fmt_int(topline["deals"].actual), topline["deals"], "red"),
         ("费用", _fmt_money_wan(topline["spend"].actual), topline["spend"], "ink"),
         ("CPL", _fmt_money(topline["cpl"].actual), topline["cpl"], "blue"),
@@ -907,8 +907,8 @@ def _funnel_html(topline: dict[str, Metric]) -> str:
     steps = [
         ("曝光", topline["impressions"].actual, _fmt_wan(topline["impressions"].actual), "曝光口径"),
         ("原始线索", topline["raw_leads"].actual, _fmt_int(topline["raw_leads"].actual), "lead_quality.raw_leads"),
-        ("唯一线索", topline["unique"].actual, _fmt_int(topline["unique"].actual), "mtd_unique_leads"),
-        ("来客线索", topline["orders"].actual, _fmt_int(topline["orders"].actual), "mtd_douyin_laike_orders"),
+        ("风车线索（去重）", topline["unique"].actual, _fmt_int(topline["unique"].actual), "mtd_unique_leads"),
+        ("抖音来客订单（去重）", topline["orders"].actual, _fmt_int(topline["orders"].actual), "mtd_douyin_laike_orders"),
         ("实销", topline["deals"].actual, _fmt_int(topline["deals"].actual), "mtd_deals"),
     ]
     max_value = max([value for _, value, _, _ in steps] + [1])
@@ -946,7 +946,7 @@ def _segment_html(ex7: SegmentMetrics, non_ex7: SegmentMetrics) -> str:
     cps_delta = ex7.cps - non_ex7.cps
     cpl_delta = ex7.cpl - non_ex7.cpl
     insight = [
-        ("EX7 线索占比", _fmt_pct(_safe_div(ex7.leads, total_leads)), "EX7 专项唯一线索 / 总唯一线索"),
+        ("EX7 线索占比", _fmt_pct(_safe_div(ex7.leads, total_leads)), "EX7 专项风车线索 / 总风车线索"),
         ("不含 EX7 实销占比", _fmt_pct(_safe_div(non_ex7.deals, total_deals)), "不含 EX7 实销 / 总实销"),
         ("CPL 差异", _fmt_money(cpl_delta), "EX7 CPL - 不含 EX7 CPL"),
         ("CPS 差异", _fmt_money(cps_delta), "EX7 CPS - 不含 EX7 CPS"),
@@ -972,7 +972,7 @@ def _segment_html(ex7: SegmentMetrics, non_ex7: SegmentMetrics) -> str:
 
 def _segment_panel(segment: SegmentMetrics, tone: str) -> str:
     values = [
-        ("唯一线索", _fmt_int(segment.leads)),
+        ("风车线索（去重）", _fmt_int(segment.leads)),
         ("实销", _fmt_int(segment.deals)),
         ("消耗", _fmt_money_wan(segment.spend)),
         ("CPL", _fmt_money(segment.cpl)),
@@ -1022,8 +1022,8 @@ def _lead_anchor_table(anchors: list[dict[str, Any]]) -> str:
           <thead>
             <tr>
               <th>主播</th>
-              <th>累计唯一线索</th>
-              <th>来客线索 / 达成</th>
+              <th>风车线索（去重）</th>
+              <th>抖音来客订单（去重） / 达成</th>
               <th>累计实销</th>
               <th>CPL</th>
               <th>CPS</th>
@@ -1137,6 +1137,10 @@ function fmtMoneyWan(value) {{
   return Math.abs(numeric) >= 10000 ? `¥${{fmtFloat(numeric / 10000)}}万` : fmtMoney(numeric);
 }}
 
+function isUnitCost(unit) {{
+  return String(unit || "").includes("/");
+}}
+
 function fmtPct(value) {{
   return `${{fmtFloat(Number(value || 0) * 100)}}%`;
 }}
@@ -1149,7 +1153,7 @@ function fmtMetric(metric) {{
   if (metric?.display) return metric.display;
   const unit = metric?.unit || "";
   const value = metricValue(metric);
-  if (unit.includes("元")) return fmtMoneyWan(value);
+  if (unit.includes("元")) return isUnitCost(unit) ? fmtMoney(value) : fmtMoneyWan(value);
   if (unit.includes("人次")) return fmtWan(value);
   if (metric?.key === "unique_rate") return fmtPct(value);
   return fmtInt(value);
@@ -1264,8 +1268,8 @@ function renderDecision(payload) {{
   document.getElementById("decision-core").innerHTML = [
     decisionKpiCard("曝光", overview.impressions, "teal"),
     decisionKpiCard("线索", overview.raw_leads, "blue"),
-    decisionKpiCard("唯一线索", overview.mtd_unique_leads, "green"),
-    decisionKpiCard("来客线索", overview.mtd_douyin_laike_orders, "amber"),
+    decisionKpiCard("风车线索（去重）", overview.mtd_unique_leads, "green"),
+    decisionKpiCard("抖音来客订单（去重）", overview.mtd_douyin_laike_orders, "amber"),
     decisionKpiCard("实销", overview.mtd_deals, "red"),
     decisionKpiCard("CPL", overview.mtd_cpl, "blue"),
     decisionKpiCard("CPS", overview.mtd_cps, "red"),
@@ -1274,7 +1278,7 @@ function renderDecision(payload) {{
 
   document.getElementById("decision-status").innerHTML = [
     statusRow("线索达成", overview.mtd_unique_leads),
-    statusRow("来客线索达成", overview.mtd_douyin_laike_orders),
+    statusRow("抖音来客订单达成", overview.mtd_douyin_laike_orders),
     statusRow("实销达成", overview.mtd_deals),
     statusRow("种草曝光达成", payload.seed_account),
   ].join("");
@@ -1287,7 +1291,7 @@ function renderDecision(payload) {{
     attentionItem(
       "主播线索",
       topLead ? `${{topLead.name}} · ${{fmtInt(metricValue(anchorMetric(topLead, "mtd_unique_leads")))}} 条` : "未提供",
-      "线索组主播唯一线索最高",
+      "线索组主播风车线索最高",
       "green"
     ),
     attentionItem(
@@ -1308,7 +1312,7 @@ function renderWorkbench(payload) {{
   const topSeed = topAnchorByMetric(payload.seed_anchors, "mtd_impressions");
   setText(
     "wb-overview-primary",
-    `${{fmtWan(metricValue(overview.impressions))}}曝光 · ${{fmtInt(metricValue(overview.mtd_unique_leads))}}唯一线索`
+    `${{fmtWan(metricValue(overview.impressions))}}曝光 · ${{fmtInt(metricValue(overview.mtd_unique_leads))}}风车线索`
   );
   setText("wb-trend-primary", "历史趋势 / 月度对比");
   setText("wb-trend-secondary", "日报源表历史文件");
@@ -1328,8 +1332,8 @@ function renderWorkbench(payload) {{
 }}
 
 const LEAD_SORT_CONTROLS = {{
-  mtd_unique_leads: {{ label: "按唯一线索排序", direction: "desc" }},
-  mtd_douyin_laike_orders: {{ label: "按来客线索排序", direction: "desc" }},
+  mtd_unique_leads: {{ label: "按风车线索排序", direction: "desc" }},
+  mtd_douyin_laike_orders: {{ label: "按抖音来客订单排序", direction: "desc" }},
   mtd_cpl: {{ label: "按 CPL 排序", direction: "asc" }},
 }};
 
@@ -1354,8 +1358,8 @@ function renderOverview(payload) {{
   const overview = payload.overview;
   const cards = [
     ["曝光", overview.impressions, "teal"],
-    ["唯一线索", overview.mtd_unique_leads, "green"],
-    ["来客线索", overview.mtd_douyin_laike_orders, "amber"],
+    ["风车线索（去重）", overview.mtd_unique_leads, "green"],
+    ["抖音来客订单（去重）", overview.mtd_douyin_laike_orders, "amber"],
     ["实销", overview.mtd_deals, "red"],
     ["费用", overview.mtd_spend, "ink"],
     ["CPL", overview.mtd_cpl, "blue"],
@@ -1397,7 +1401,7 @@ function renderFunnel(payload) {{
 }}
 
 function anchorMetric(anchor, key) {{
-  return anchor.metrics?.[key] || {{ actual: 0, target: null, attain_rate: null, unit: "" }};
+  return anchor.metrics?.[key] || {{ actual: null, target: null, attain_rate: null, unit: "" }};
 }}
 
 function anchorOptionalMetric(anchor, key, label, unit = "") {{
@@ -1408,7 +1412,7 @@ function fmtNullableMetric(metric) {{
   if (!hasValue(metric?.actual) || Number.isNaN(Number(metric.actual))) return "未提供";
   const value = Number(metric.actual);
   const unit = metric?.unit || "";
-  if (unit.includes("元")) return fmtMoneyWan(value);
+  if (unit.includes("元")) return isUnitCost(unit) ? fmtMoney(value) : fmtMoneyWan(value);
   if (unit.includes("人次")) return fmtWan(value);
   if (unit.includes("比例")) return fmtPct(value);
   return Number.isInteger(value) ? fmtInt(value) : fmtFloat(value);
@@ -1474,9 +1478,9 @@ function seedColgroup() {{
 
 function leadTableHeader() {{
   if (!IS_BUSINESS_MODE) {{
-    return `<thead><tr><th>主播</th><th>所属账号 / 直播间</th><th>线索进度</th><th>累计唯一线索</th><th>来客线索 / 达成</th><th>到店数</th><th>到店率</th><th>到店成交率</th><th>累计实销</th><th>费用</th><th>CPL</th><th>CPS</th></tr></thead>`;
+    return `<thead><tr><th>主播</th><th>所属账号 / 直播间</th><th>风车线索进度</th><th>风车线索（去重）</th><th>抖音来客订单（去重） / 达成</th><th>到店数</th><th>到店率</th><th>到店成交率</th><th>累计实销</th><th>费用</th><th>CPL</th><th>CPS</th></tr></thead>`;
   }}
-  return `<thead><tr><th>主播</th><th>所属账号 / 直播间</th><th class="bar-header">线索进度</th><th class="metric-value-header">累计唯一线索</th><th>来客线索 / 达成</th><th>到店数</th><th>到店率</th><th>到店成交率</th><th>累计实销</th><th>费用</th><th>CPL</th><th>CPS</th></tr></thead>`;
+  return `<thead><tr><th>主播</th><th>所属账号 / 直播间</th><th class="bar-header">风车线索进度</th><th class="metric-value-header">风车线索（去重）</th><th>抖音来客订单（去重） / 达成</th><th>到店数</th><th>到店率</th><th>到店成交率</th><th>累计实销</th><th>费用</th><th>CPL</th><th>CPS</th></tr></thead>`;
 }}
 
 function seedTableHeader() {{
@@ -2102,6 +2106,10 @@ function fmtMoneyWan(value) {{
   return Math.abs(numeric) >= 10000 ? `¥${{fmtFloat(numeric / 10000)}}万` : fmtMoney(numeric);
 }}
 
+function isUnitCost(unit) {{
+  return String(unit || "").includes("/");
+}}
+
 function fmtPct(value) {{
   return `${{fmtFloat(Number(value || 0) * 100)}}%`;
 }}
@@ -2139,7 +2147,7 @@ function rangeLabelFromPoints(points) {{
 function fmtMetricValue(value, unit = "") {{
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "未提供";
   const numeric = Number(value);
-  if (unit.includes("元")) return fmtMoneyWan(value);
+  if (unit.includes("元")) return isUnitCost(unit) ? fmtMoney(numeric) : fmtMoneyWan(numeric);
   if (unit.includes("人次")) return fmtWan(value);
   if (unit.includes("比例")) return fmtPct(numeric);
   return fmtInt(value);
@@ -2353,7 +2361,7 @@ function trendLineChart(series, previousSeries = null, options = {{}}) {{
   const legend = hasPreviousValues
     ? `<div class="chart-legend"><span><i class="legend-current"></i>本期</span>
         <span><i class="legend-previous"></i>上一周期</span></div>`
-    : `<div class="chart-legend"><span><i class="legend-current"></i>本期；上一周期：未提供</span></div>`;
+    : `<div class="chart-legend"><span><i class="legend-current"></i>当前范围</span></div>`;
   return `
     <div class="trend-chart${{compact ? " compact-chart" : ""}}${{featured ? " featured-chart" : ""}}" data-unit="${{escapeHtml(series?.unit || "")}}" data-metric-label="${{escapeHtml(series?.label || series?.key || "")}}">
       ${{legend}}
@@ -2433,7 +2441,7 @@ function historyPanel(series, previousByKey) {{
   const latest = latestTrendPoint(series?.points || []);
   const currentRange = rangeLabelFromPoints(series?.points || []);
   const previousHasValues = (previousSeries?.points || []).map(normalizePoint).some((point) => point.value !== null);
-  const periodState = previousHasValues ? "本期 / 上一周期" : "本期 / 上一周期：未提供";
+  const periodState = previousHasValues ? "本期 / 上一周期" : "当前范围";
   return `
     <article class="trend-panel history-chart-card">
       <div class="trend-panel-header history-card-head">
@@ -2466,13 +2474,20 @@ function metricGroup(title, metrics) {{
     <span>
       <small>${{escapeHtml(item.label || item.key)}}</small>
       <strong>${{escapeHtml(metricDisplayText(item))}}</strong>
+      ${{metricStatusNote(item)}}
     </span>`).join("");
   return `<div class="metric-group"><h4>${{escapeHtml(title)}}</h4><div>${{items}}</div></div>`;
 }}
 
 function metricDisplayText(item) {{
+  if (item?.source_status === "not_applicable") return "不可计算";
   if (item?.source_status === "not_connected") return "未提供";
   return fmtMetricValue(item?.actual, item?.unit || "");
+}}
+
+function metricStatusNote(item) {{
+  if (item?.source_status !== "not_applicable" || !item?.note) return "";
+  return `<em class="metric-status-note">${{escapeHtml(item.note)}}</em>`;
 }}
 
 function detailCard(entity, className) {{
@@ -2487,7 +2502,7 @@ function detailCard(entity, className) {{
         </div>
       </div>
       <div class="card-measure">
-        <span>线索数</span>
+        <span>风车线索（去重）</span>
         <strong>${{escapeHtml(fmtMetricValue(primary.actual, primary.unit || ""))}}</strong>
       </div>
       <div class="business-sub">
@@ -2510,7 +2525,7 @@ const HIDDEN_ACCOUNT_NAMES = new Set([
 
 const ACCOUNT_SORT_OPTIONS = {{
   default: {{ label: "默认排序" }},
-  leads: {{ label: "线索数" }},
+  leads: {{ label: "风车线索（去重）" }},
   deals: {{ label: "成交数" }},
   spend: {{ label: "费用" }},
   cpl: {{ label: "CPL" }},
@@ -2568,6 +2583,7 @@ function accountMetricCell(label, item) {{
     <span>
       <small>${{escapeHtml(label)}}</small>
       <strong>${{escapeHtml(metricDisplayText(item))}}</strong>
+      ${{metricStatusNote(item)}}
     </span>`;
 }}
 
@@ -2584,6 +2600,15 @@ function accountOver100Summary(entity) {{
     .join("");
 }}
 
+function accountNotApplicableSummary(entity) {{
+  return [["到店率", "visit_rate"], ["到店成交率", "visit_deal_rate"]]
+    .map(([label, key]) => {{
+      const item = metric(entity, key);
+      return item?.source_status === "not_applicable" ? accountMetricCell(label, item) : "";
+    }})
+    .join("");
+}}
+
 function accountSummaryGrid(entity) {{
   const leads = metric(entity, "leads");
   const deals = metric(entity, "deals");
@@ -2592,13 +2617,14 @@ function accountSummaryGrid(entity) {{
   const cps = metric(entity, "cps");
   return `
     <div class="account-summary-grid">
-      ${{accountMetricCell("线索数", leads)}}
+      ${{accountMetricCell("风车线索（去重）", leads)}}
       ${{accountMetricCell("成交数", deals)}}
       ${{accountMetricCell("费用", spend)}}
       ${{accountMetricCell("CPL", cpl)}}
       ${{accountMetricCell("CPS", cps)}}
       ${{accountTargetSummary(leads)}}
       ${{accountOver100Summary(entity)}}
+      ${{accountNotApplicableSummary(entity)}}
     </div>`;
 }}
 
@@ -2611,8 +2637,8 @@ function accountDetailPanel(entity, expanded) {{
   const panelClass = expanded ? "account-detail-panel is-expanded" : "account-detail-panel";
   return `
     <div class="${{panelClass}}"${{expanded ? "" : " hidden"}} aria-hidden="${{expanded ? "false" : "true"}}">
-      ${{accountMetricGroup("线索组", [["线索数", "leads"], ["唯一线索数", "unique_leads"]], entity)}}
-      ${{accountMetricGroup("来客线索", [["来客线索", "douyin_laike_orders"]], entity)}}
+      ${{accountMetricGroup("线索组", [["风车线索（去重）", "leads"]], entity)}}
+      ${{accountMetricGroup("抖音来客订单", [["抖音来客订单（去重）", "douyin_laike_orders"]], entity)}}
       ${{accountMetricGroup("到店组", [["到店数", "visits"], ["到店率", "visit_rate"], ["到店成交率", "visit_deal_rate"]], entity)}}
       ${{accountMetricGroup("成交组", [["成交数", "deals"], ["线索成交率", "lead_deal_rate"]], entity)}}
       ${{accountMetricGroup("成本组", [["费用", "spend"], ["CPL", "cpl"], ["CPS", "cps"]], entity)}}
@@ -2652,7 +2678,7 @@ function featuredAccountCard(entity) {{
       </div>
       <div class="account-card-topline featured-topline">
         <div class="card-measure">
-          <span>线索数</span>
+          <span>风车线索（去重）</span>
           <strong>${{escapeHtml(fmtMetricValue(primary.actual, primary.unit || ""))}}</strong>
         </div>
         <div class="card-measure secondary">
@@ -2843,7 +2869,7 @@ function renderAccounts(payload) {{
 
 const ANCHOR_SORT_OPTIONS = {{
   default: {{ label: "默认排序" }},
-  leads: {{ label: "线索数" }},
+  leads: {{ label: "风车线索（去重）" }},
   deals: {{ label: "成交数" }},
   spend: {{ label: "费用" }},
   cpl: {{ label: "CPL" }},
@@ -2877,6 +2903,7 @@ function anchorMetricCell(label, item) {{
     <span>
       <small>${{escapeHtml(label)}}</small>
       <strong>${{escapeHtml(metricDisplayText(item))}}</strong>
+      ${{metricStatusNote(item)}}
     </span>`;
 }}
 
@@ -2891,14 +2918,21 @@ function anchorSummaryGrid(entity) {{
   const spend = metric(entity, "spend");
   const cpl = metric(entity, "cpl");
   const cps = metric(entity, "cps");
+  const notApplicableVisits = [["到店率", "visit_rate"], ["到店成交率", "visit_deal_rate"]]
+    .map(([label, key]) => {{
+      const item = metric(entity, key);
+      return item?.source_status === "not_applicable" ? anchorMetricCell(label, item) : "";
+    }})
+    .join("");
   return `
     <div class="anchor-summary-grid">
-      ${{anchorMetricCell("线索数", leads)}}
+      ${{anchorMetricCell("风车线索（去重）", leads)}}
       ${{anchorMetricCell("成交数", deals)}}
       ${{anchorMetricCell("费用", spend)}}
       ${{anchorMetricCell("CPL", cpl)}}
       ${{anchorMetricCell("CPS", cps)}}
       ${{anchorTargetSummary(leads)}}
+      ${{notApplicableVisits}}
     </div>`;
 }}
 
@@ -2950,8 +2984,8 @@ function anchorDetailPanel(entity, expanded) {{
         <small>所属账号</small>
         <strong>${{escapeHtml(anchorParentScope(entity))}}</strong>
       </div>
-      ${{anchorMetricGroup("线索组", [["线索数", "leads"], ["唯一线索数", "unique_leads"]], entity)}}
-      ${{anchorMetricGroup("来客线索", [["来客线索", "douyin_laike_orders"]], entity)}}
+      ${{anchorMetricGroup("线索组", [["风车线索（去重）", "leads"]], entity)}}
+      ${{anchorMetricGroup("抖音来客订单", [["抖音来客订单（去重）", "douyin_laike_orders"]], entity)}}
       ${{anchorMetricGroup("到店组", [["到店数", "visits"], ["到店率", "visit_rate"], ["到店成交率", "visit_deal_rate"]], entity)}}
       ${{anchorMetricGroup("成交组", [["成交数", "deals"], ["线索成交率", "lead_deal_rate"]], entity)}}
       ${{anchorMetricGroup("成本组", [["费用", "spend"], ["CPL", "cpl"], ["CPS", "cps"]], entity)}}
@@ -3135,7 +3169,7 @@ const SEED_SORT_OPTIONS = {{
   impressions: {{ label: "曝光" }},
   target: {{ label: "目标参考" }},
   target_rate: {{ label: "当前 / 目标" }},
-  latest: {{ label: "最新曝光" }},
+  latest: {{ label: "范围日曝光合计" }},
   name: {{ label: "名称" }},
 }};
 
@@ -3189,9 +3223,9 @@ function seedImpressionsMetric(entity) {{
 function seedLatestMetric(entity) {{
   const metrics = entity?.metrics || {{}};
   const direct = metrics.latest_impressions || metrics.daily_impressions || metrics.latest_exposure;
-  if (direct) return {{ ...direct, label: "最新曝光" }};
+  if (direct) return {{ ...direct, label: "范围日曝光合计" }};
   const impressions = seedImpressionsMetric(entity);
-  return {{ ...impressions, label: "最新曝光" }};
+  return {{ ...impressions, label: "范围日曝光合计" }};
 }}
 
 function seedLatestExposureValue(entity) {{
@@ -3288,7 +3322,7 @@ function seedDetailPanel(entity, expanded) {{
     <div class="${{panelClass}}"${{expanded ? "" : " hidden"}} aria-hidden="${{expanded ? "false" : "true"}}">
       ${{seedMetricGroup("曝光组", [
         seedMetricCell("曝光", impressions),
-        seedMetricCell("最新曝光", latest),
+        seedMetricCell("范围日曝光合计", latest),
       ])}}
       ${{seedMetricGroup("目标组", [
         seedMetricCell("目标参考", hasValue(impressions?.target) ? {{ ...impressions, actual: impressions.target }} : seedMissingTargetMetric(impressions)),
@@ -3505,10 +3539,7 @@ function monthlyCellTooltip(row, metric, coverage) {{
     `月份：${{month}}`,
     `指标：${{label}}`,
     `本期值：${{value}}`,
-    "上一周期值：未提供",
-    "差值：未提供",
-    "变化率：未提供",
-    `说明：覆盖范围 ${{coverage || "未提供"}}`,
+    `覆盖范围：${{coverage || "未提供"}}`,
   ].join("；");
 }}
 
@@ -3583,11 +3614,13 @@ function tooltipRows(target, chart) {{
     `<strong>日期：${{escapeHtml(target.dataset.date || "未提供")}}</strong>`,
     `<span>指标：${{escapeHtml(label)}}</span>`,
     `<span>本期值：${{escapeHtml(fmtMetricValue(currentValue, unit))}}</span>`,
-    `<span>上一周期值：${{escapeHtml(hasPrevious ? fmtMetricValue(previousValue, unit) : "未提供")}}</span>`,
-    `<span>差值：${{escapeHtml(diff === null ? "未提供" : fmtMetricValue(diff, unit))}}</span>`,
-    `<span>变化率：${{escapeHtml(rate === null ? "未提供" : fmtPct(rate))}}</span>`,
   ];
-  rows.push(`<span>说明：${{currentValue === null ? "缺失值：未提供" : "当前点位"}}</span>`);
+  if (hasPrevious) {{
+    rows.push(`<span>上一周期值：${{escapeHtml(fmtMetricValue(previousValue, unit))}}</span>`);
+    rows.push(`<span>差值：${{escapeHtml(diff === null ? "未提供" : fmtMetricValue(diff, unit))}}</span>`);
+    rows.push(`<span>变化率：${{escapeHtml(rate === null ? "未提供" : fmtPct(rate))}}</span>`);
+  }}
+  if (currentValue === null) rows.push("<span>当前日期没有可用值</span>");
   return rows.join("");
 }}
 
@@ -6552,6 +6585,16 @@ body[data-dashboard-mode="trend"] .trend-spark .spark-gap {
   color: var(--ink);
   font-size: 16px;
   line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.metric-status-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .signal {
