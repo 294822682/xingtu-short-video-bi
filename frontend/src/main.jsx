@@ -6,6 +6,7 @@ import { BI_MODULES } from "./modules.js";
 import { routeFromPath } from "./routing.js";
 import { sampleDatasets } from "./sampleData.js";
 import { dashboardHeaderStatusText } from "./headerStatus.js";
+import { accountTableColumns, actorTableColumns } from "./responsiveTables.js";
 import { formatBusinessNumber, formatInteger } from "../formatters.js";
 import "./styles.css";
 
@@ -535,29 +536,25 @@ function ChartPanel({ title, rows, labelKey, valueKey, compact = false }) {
 
 function AccountTable({ rows }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap responsive-table">
       <table>
         <thead>
           <tr>
-            <th>平台</th>
-            <th>账号名称</th>
-            <th>发布条数</th>
-            <th>曝光量</th>
-            <th>平均曝光</th>
-            <th>5S 完播率</th>
-            <th>有演员视频</th>
+            {accountTableColumns.map((column) => (
+              <th key={column.key}>{column.label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.account_name}>
-              <td>{row.platform}</td>
-              <td>{row.account_name}</td>
-              <td>{formatInteger(row.video_count)}</td>
-              <td>{formatBusinessNumber(row.exposure)}</td>
-              <td>{formatBusinessNumber(row.average_exposure)}</td>
-              <td>{row.completion_5s_display}</td>
-              <td>{formatInteger(row.actor_video_count)}</td>
+              <td data-label={accountTableColumns[0].label}>{row.platform}</td>
+              <td data-label={accountTableColumns[1].label}>{row.account_name}</td>
+              <td data-label={accountTableColumns[2].label}>{formatInteger(row.video_count)}</td>
+              <td data-label={accountTableColumns[3].label}>{formatBusinessNumber(row.exposure)}</td>
+              <td data-label={accountTableColumns[4].label}>{formatBusinessNumber(row.average_exposure)}</td>
+              <td data-label={accountTableColumns[5].label}>{row.completion_5s_display}</td>
+              <td data-label={accountTableColumns[6].label}>{formatInteger(row.actor_video_count)}</td>
             </tr>
           ))}
         </tbody>
@@ -568,25 +565,23 @@ function AccountTable({ rows }) {
 
 function ActorTable({ rows }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap responsive-table">
       <table>
         <thead>
           <tr>
-            <th>视频演员</th>
-            <th>拍摄条数</th>
-            <th>参与账号数</th>
-            <th>贡献曝光量</th>
-            <th>参与账号</th>
+            {actorTableColumns.map((column) => (
+              <th key={column.key}>{column.label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.actor_name}>
-              <td>{row.actor_name}</td>
-              <td>{formatInteger(row.video_count)}</td>
-              <td>{formatInteger(row.account_count)}</td>
-              <td>{formatBusinessNumber(row.contributed_exposure)}</td>
-              <td>{row.accounts}</td>
+              <td data-label={actorTableColumns[0].label}>{row.actor_name}</td>
+              <td data-label={actorTableColumns[1].label}>{formatInteger(row.video_count)}</td>
+              <td data-label={actorTableColumns[2].label}>{formatInteger(row.account_count)}</td>
+              <td data-label={actorTableColumns[3].label}>{formatBusinessNumber(row.contributed_exposure)}</td>
+              <td data-label={actorTableColumns[4].label}>{row.accounts}</td>
             </tr>
           ))}
         </tbody>

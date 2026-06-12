@@ -844,6 +844,51 @@ td {
     grid-template-columns: 1fr;
   }
 
+  .responsive-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .responsive-table table,
+  .responsive-table tbody,
+  .responsive-table tr {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tr {
+    overflow: hidden;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .responsive-table td {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.4fr);
+    gap: 12px;
+    align-items: start;
+    border-bottom: 1px solid var(--color-border-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    color: #52647d;
+    font-weight: 700;
+  }
+
+  .responsive-table td:last-child {
+    border-bottom: 0;
+  }
+
   .segment-row {
     grid-template-columns: 1fr;
   }
