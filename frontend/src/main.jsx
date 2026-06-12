@@ -5,6 +5,7 @@ import { ArrowRight, BarChart3, Database, RefreshCw, TrendingDown, TrendingUp, U
 import { BI_MODULES } from "./modules.js";
 import { routeFromPath } from "./routing.js";
 import { sampleDatasets } from "./sampleData.js";
+import { dashboardHeaderStatusText } from "./headerStatus.js";
 import { formatBusinessNumber, formatInteger } from "../formatters.js";
 import "./styles.css";
 
@@ -414,6 +415,7 @@ function SeedExposurePanel({ account, anchors }) {
 
 function Header({ dataset, status, module }) {
   const live = status === "live";
+  const isXingtu = module.slug === "xingtu";
   return (
     <header className="top-header">
       <div>
@@ -421,8 +423,14 @@ function Header({ dataset, status, module }) {
         <h1>{module.name}</h1>
       </div>
       <div className="header-meta">
-        <span>{dataset.overview.source_file_name}</span>
-        <span>{dataset.overview.generated_at}</span>
+        {isXingtu ? (
+          <span>{dashboardHeaderStatusText({ status, overview: dataset.overview })}</span>
+        ) : (
+          <>
+            <span>{dataset.overview.source_file_name}</span>
+            <span>{dataset.overview.generated_at}</span>
+          </>
+        )}
         <Badge text={live ? "已刷新" : "样例数据"} tone={live ? "success" : "neutral"} />
         <a className="admin-link" href={module.adminPath}>数据维护</a>
       </div>
